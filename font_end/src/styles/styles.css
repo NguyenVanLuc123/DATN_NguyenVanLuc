@@ -1,0 +1,248 @@
+/* ===== HEADER STYLES ===== */
+/* Header container */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: fixed; /* Giữ header cố định ở trên cùng */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* Logo trong header */
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: #333;
+  text-decoration: none;
+}
+
+/* Thanh điều hướng */
+.header-nav {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+/* Links trong thanh điều hướng */
+.header-nav a {
+  text-decoration: none;
+  color: #666;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.header-nav a:hover {
+  color: #1a73e8;
+}
+
+/* ===== FORM ĐĂNG KÝ ===== */
+/* Container chứa form */
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 2rem;
+  margin-top: 64px; /* Tạo khoảng cách với header cố định */
+}
+
+/* Form đăng ký */
+.register-form {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Tiêu đề form */
+.register-form h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+/* Nhóm form control */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+/* Label cho các trường input */
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Style cho input và select */
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+/* Hiệu ứng focus cho input và select */
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+}
+
+/* Placeholder cho input */
+.form-group input::placeholder {
+  color: #aaa;
+}
+
+/* Phần chọn loại tài khoản */
+.account-type {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+/* Label cho radio buttons */
+.account-type label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.account-type label:hover {
+  background-color: #eef2ff;
+  border-radius: 4px;
+}
+
+/* Radio buttons */
+.account-type input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+
+/* Phần điều khoản và điều kiện */
+.terms {
+  margin: 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+/* Checkbox điều khoản */
+.terms input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+
+/* Nút đăng ký */
+.register-button {
+  width: 100%;
+  padding: 1rem;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+
+.register-button:hover {
+  background-color: #1557b0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(26, 115, 232, 0.2);
+}
+
+.register-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Thông báo */
+.message {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Thông báo thành công */
+.message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+/* Thông báo lỗi */
+.message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+
+/* ===== RESPONSIVE STYLES ===== */
+@media (max-width: 768px) {
+  .header {
+    padding: 1rem;
+  }
+
+  .register-container {
+    padding: 1rem;
+  }
+
+  .register-form {
+    padding: 1.5rem;
+  }
+
+  .header-nav {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-logo span:last-child {
+    display: none; /* Ẩn text logo trên mobile */
+  }
+
+  .register-form {
+    padding: 1rem;
+  }
+
+  .register-form h2 {
+    font-size: 1.5rem;
+  }
+} 
