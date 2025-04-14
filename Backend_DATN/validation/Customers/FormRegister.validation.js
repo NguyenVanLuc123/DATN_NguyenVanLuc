@@ -55,3 +55,34 @@ module.exports.register = (req, res, next) => {
    
     next();
 };
+
+
+module.exports.login = (req, res, next) => {
+    const { email, password } = req.body;
+    const errors = [];
+
+    // Kiểm tra email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || email.trim().length === 0) {
+        errors.push("Email không được để trống");
+    } else if (!emailRegex.test(email)) {
+        errors.push("Email không hợp lệ");
+    }
+
+    // Kiểm tra mật khẩu
+    if (!password || password.trim().length === 0) {
+        errors.push("Mật khẩu không được để trống");
+    }
+
+    // Nếu có lỗi, trả về phản hồi lỗi
+    if (errors.length > 0) {
+        return res.status(400).json({
+            success: false,
+            message: errors[0],
+            errors: errors
+        });
+    }
+
+    // Nếu không có lỗi, tiếp tục
+    next();
+};
