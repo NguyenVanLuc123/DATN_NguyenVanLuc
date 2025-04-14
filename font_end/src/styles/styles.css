@@ -1,3 +1,5 @@
+
+
 /* ===== HEADER STYLES ===== */
 /* Header container */
 .header {
@@ -166,7 +168,7 @@
 .register-button {
   width: 100%;
   padding: 1rem;
-  background-color: #1a73e8;
+  background-color: #1a73e8 !important;
   color: white;
   border: none;
   border-radius: 8px;
@@ -174,12 +176,14 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  opacity: 0.5;
   margin-top: 1rem;
 }
 
 .register-button:hover {
   background-color: #1557b0;
   transform: translateY(-1px);
+  opacity: 1;
   box-shadow: 0 4px 8px rgba(26, 115, 232, 0.2);
 }
 

@@ -4,7 +4,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Register from './pages/Register';
 import About from './pages/About';
+import Login from './pages/Login';
 import './styles/styles.css';
+import './index.css';
+
 
 function App() {
   return (
@@ -13,7 +16,8 @@ function App() {
         <Header />
         <Routes>
           <Route path="/signup" element={<Register />} />
-          <Route path="/about" element={<About />}/>
+          <Route path="/" element={<About />}/>
+          <Route path="/login" element={<Login />}/>
         </Routes>
       </div>
     </Router>

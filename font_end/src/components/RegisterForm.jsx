@@ -32,19 +32,19 @@ const RegisterForm = () => {
 
     // Validation
     if (!formData.agreeToTerms) {
-      setMessage({ type: 'error', text: 'Vui lòng đồng ý với Điều khoản và Điều kiện' });
+      setMessage({ type: 'error', text: 'Please agree to the Terms and Conditions' });
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setMessage({ type: 'error', text: 'Mật khẩu xác nhận không khớp' });
+      setMessage({ type: 'error', text: 'Passwords do not match' });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Chuẩn bị dữ liệu gửi đi
+      // Prepare data to submit
       const submitData = {
         name: formData.name.trim(),
         email: formData.email.trim(),
@@ -61,8 +61,8 @@ const RegisterForm = () => {
       console.log('Server response:', response);
 
       if (response && response.data) {
-        setMessage({ type: 'success', text: response.data.message || 'Đăng ký thành công' });
-        showSuccess(response.data.message || 'Đăng ký thành công');
+        setMessage({ type: 'success', text: response.data.message || 'Registration successful' });
+        showSuccess(response.data.message || 'Registration successful');
         
         // Reset form
         setFormData({
@@ -79,24 +79,24 @@ const RegisterForm = () => {
       console.error('Form submission error:', error);
 
       if (error.response) {
-        // Server trả về lỗi
-        const errorMessage = error.response.data.message || 'Có lỗi xảy ra khi đăng ký';
+        // Server returned an error
+        const errorMessage = error.response.data.message || 'An error occurred during registration';
         setMessage({ type: 'error', text: errorMessage });
         showError(errorMessage);
         console.log('Server error response:', error.response.data);
       } else if (error.request) {
-        // Không nhận được response
+        // No response received
         console.log('No response received:', error.request);
         setMessage({ 
           type: 'error', 
-          text: 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và CORS.' 
+          text: 'Could not connect to the server. Please check your network connection and CORS.' 
         });
-        showError('Không thể kết nối đến server');
+        showError('Could not connect to the server');
       } else {
-        // Lỗi khác
+        // Other errors
         console.log('Error details:', error);
-        setMessage({ type: 'error', text: 'Có lỗi xảy ra. Vui lòng thử lại sau.' });
-        showError('Có lỗi xảy ra. Vui lòng thử lại sau.');
+        setMessage({ type: 'error', text: 'An error occurred. Please try again later.' });
+        showError('An error occurred. Please try again later.');
       }
     } finally {
       setIsSubmitting(false);
@@ -106,15 +106,15 @@ const RegisterForm = () => {
   return (
     <div className="register-container">
       <div className="register-form">
-        <h2>Đăng ký</h2>
+        <h2>Sign Up</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="name">Họ và tên</label>
+            <label htmlFor="name">Full Name</label>
             <input
               type="text"
               id="name"
               name="name"
-              placeholder="Nhập họ và tên của bạn"
+              placeholder="Enter your full name"
               value={formData.name}
               onChange={handleChange}
               required
@@ -127,7 +127,7 @@ const RegisterForm = () => {
               type="email"
               id="email"
               name="email"
-              placeholder="Nhập email của bạn"
+              placeholder="Enter your email"
               value={formData.email}
               onChange={handleChange}
               required
@@ -135,12 +135,12 @@ const RegisterForm = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phone">Số điện thoại</label>
+            <label htmlFor="phone">Phone Number</label>
             <input
               type="tel"
               id="phone"
               name="phone"
-              placeholder="Nhập số điện thoại của bạn"
+              placeholder="Enter your phone number"
               value={formData.phone}
               onChange={handleChange}
               required
@@ -148,12 +148,12 @@ const RegisterForm = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Mật khẩu</label>
+            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
               name="password"
-              placeholder="Nhập mật khẩu"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={handleChange}
               required
@@ -161,12 +161,12 @@ const RegisterForm = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+            <label htmlFor="confirmPassword">Confirm Password</label>
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
-              placeholder="Xác nhận lại mật khẩu"
+              placeholder="Confirm your password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
@@ -182,7 +182,7 @@ const RegisterForm = () => {
                 checked={formData.is_owner === "0"}
                 onChange={handleChange}
               />
-              Tôi muốn thuê xe
+              I want to rent a car
             </label>
             <label>
               <input
@@ -192,7 +192,7 @@ const RegisterForm = () => {
                 checked={formData.is_owner === "1"}
                 onChange={handleChange}
               />
-              Tôi là chủ xe
+              I am a car owner
             </label>
           </div>
 
@@ -205,7 +205,7 @@ const RegisterForm = () => {
               onChange={handleChange}
             />
             <label htmlFor="agreeToTerms">
-              Tôi đồng ý với Điều khoản và Điều kiện
+              I agree to the Terms and Conditions
             </label>
           </div>
 
@@ -214,7 +214,7 @@ const RegisterForm = () => {
             className="register-button"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
+            {isSubmitting ? 'Registering...' : 'Sign Up'}
           </button>
         </form>
 
