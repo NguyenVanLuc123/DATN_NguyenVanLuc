@@ -1,5 +1,5 @@
 const mysql = require('mysql2');
-require("dotenv").config();
+
 
 module.exports.connectDatabase = async (QueryString, values) => {
   // Tạo một pool kết nối
