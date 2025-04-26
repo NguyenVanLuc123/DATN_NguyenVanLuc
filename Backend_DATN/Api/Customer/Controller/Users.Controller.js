@@ -92,7 +92,7 @@ try{
             message: "email không chính xác"
         });
     }
-    console.log(userResult)
+   
 
     const user = userResult[0];
      // Giải mã mật khẩu
@@ -123,6 +123,7 @@ try{
         sameSite: 'strict', // Bảo vệ chống CSRF
         maxAge: 24 * 60 * 60 * 1000 // 24 giờ
     };
+    
 
     // Set token vào cookie
     res.cookie('token', token, cookieOptions);
@@ -144,6 +145,23 @@ try{
         message: "Đã xảy ra lỗi trong quá trình đăng nhập"
     });
 }
+}
+module.exports.logout=async(req,res)=>{
+    try {
+        // Xóa cookie token
+        res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+        console.log("Đăng xuất thành công")
+        return res.status(200).json({
+            success: true,
+            message: "Đăng xuất thành công"
+        });
+    } catch (error) {
+        console.log(error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Đã xảy ra lỗi trong quá trình đăng xuất"
+        });
+    }
 }
 module.exports.forgotPassword=async(req,res)=>{
     const {email}=req.body;
@@ -237,7 +255,24 @@ module.exports.ChangePassword=async(req,res)=>{
         const otpFromCookie = req.cookies.verify;
         const email= req.cookies.email;
         const {newPassword}=req.body;
-        console.log(newPassword)
+        const errors = [];
+        if (!newPassword || newPassword.trim().length === 0) {
+            errors.push("Mật khẩu không được để trống");
+        } else if (newPassword.length < 6) {
+            errors.push("Mật khẩu phải có ít nhất 6 ký tự");
+        } else if (!/[A-Z]/.test(newPassword)) {
+            errors.push("Mật khẩu phải chứa ít nhất 1 chữ hoa");
+        } else if (!/[0-9]/.test(newPassword)) {
+            errors.push("Mật khẩu phải chứa ít nhất 1 số");
+        }
+        if (errors.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: errors[0],
+                errors: errors
+            });
+        }
+    
         if(!otpFromCookie){
             return res.status(400).json({
                 success:false,
@@ -260,3 +295,6 @@ module.exports.ChangePassword=async(req,res)=>{
         })
     }
 }
+
+
+

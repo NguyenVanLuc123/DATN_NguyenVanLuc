@@ -1,25 +1,36 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Register from './pages/Register';
 import About from './pages/About';
 import Login from './pages/Login';
-import ResetPasswordPage from './pages/ResetPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import './styles/styles.css';
 import './index.css';
-
-
+import HomeUser from './pages/customer/Home';
+import Profile from './pages/customer/Profile'; 
+import SearchCarResult from './components/SearchCarResult'
+import CarDetails from './pages/CarDetails';
+import MyCars from './pages/owner/Mycars';
 function App() {
+  const [user, setUser] = useState(null);
+
   return (
     <Router>
       <div className="app">
-        <Header />
+        <Header user={user} setUser={setUser} /> {/* ✅ Sửa chỗ này */}
         <Routes>
           <Route path="/signup" element={<Register />} />
-          <Route path="/" element={<About />}/>
-          <Route path="/login" element={<Login />}/>
-          <Route path="/forgot-password" element={<ResetPasswordPage />}/>
+          <Route path="/" element={<About />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ResetPasswordPage />} />
+          <Route path="/customer/home" element={<HomeUser setUser={setUser} />} />
+          <Route path="/profile" element={<Profile  setUser={setUser}/>} />
+          <Route path="/owner/home" element={<HomeUser setUser={setUser} />} />
+          <Route path="/search_car_result" element={<SearchCarResult  setUser={setUser}/>} />
+          <Route path='/details/:id' element={<CarDetails setUser={setUser}/>}/>
+          <Route path='/owner/cars' element={<MyCars setUser={setUser}/>}/>
         </Routes>
       </div>
     </Router>

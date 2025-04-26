@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+// src/components/LoginForm.jsx
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../api/LoginApi';
+import { fetchHomeData} from '../api/customer/HomeApi'; // Import API để kiểm tra xác thực
 
 const LoginForm = () => {
     const [email, setEmail] = useState('');
@@ -8,14 +10,35 @@ const LoginForm = () => {
     const [message, setMessage] = useState(''); // Thêm state để lưu thông báo
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const response = await fetchHomeData(); // Gọi API kiểm tra xác thực
+                
+                if (response.account.is_owner === 0) {
+                    navigate('/customer/home'); // Nếu không phải owner, điều hướng đến trang customer
+                }
+                else{
+                    navigate('/owner/home'); 
+                }
+            } catch (error) {
+                console.log("lỗi lấy dữ liệu",error.message);
+            }
+        };
+    
+        checkAuth();
+    }, [navigate]);
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage(''); // Reset thông báo trước khi gửi
 
         try {
             const response = await loginUser(email, password);
-            if (response.success) {
-                navigate('/home');
+            if (response.data.is_owner===0) {
+                navigate('/customer/home');
+            }
+            else if(response.data.is_owner===1){
+                navigate('/owner/home');
             } else {
                 setMessage(response.message); // Hiển thị thông báo từ phản hồi
             }

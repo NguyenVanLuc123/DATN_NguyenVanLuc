@@ -2,6 +2,7 @@ const express= require("express");
 const body_parser=require("body-parser")
 const cookieParser = require('cookie-parser');
 const Customers_Router=require("./Api/Customer/Router/index")
+const Owner_Router=require("./Api/Owner/Router/index")
 require("dotenv").config();
 const app= express();
 const cors = require('cors');
@@ -21,7 +22,8 @@ app.use(body_parser.json());
 //cookie_parser
 app.use(cookieParser());
 //cookie_parser
-Customers_Router(app)
+Customers_Router(app);
+Owner_Router(app);
 app.listen(port,()=>{
     console.log(`App listening on port ${port} `);
 

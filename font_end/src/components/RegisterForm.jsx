@@ -1,9 +1,9 @@
 // src/components/RegisterForm.jsx
 import React, { useState } from 'react';
 import { registerUser } from '../api/RegisterApi';
-import { showSuccess, showError } from '../utils/notification';
+import {  showError } from '../utils/notification';
 import '../styles/styles.css';
-
+import { useNavigate} from 'react-router-dom';
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -14,7 +14,7 @@ const RegisterForm = () => {
     is_owner: "0",
     agreeToTerms: false
   });
-
+  const navigate = useNavigate();
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,19 +61,7 @@ const RegisterForm = () => {
       console.log('Server response:', response);
 
       if (response && response.data) {
-        setMessage({ type: 'success', text: response.data.message || 'Registration successful' });
-        showSuccess(response.data.message || 'Registration successful');
-        
-        // Reset form
-        setFormData({
-          name: '',
-          email: '',
-          phone: '',
-          password: '',
-          confirmPassword: '',
-          is_owner: "0",
-          agreeToTerms: false
-        });
+        navigate('/login')
       }
     } catch (error) {
       console.error('Form submission error:', error);

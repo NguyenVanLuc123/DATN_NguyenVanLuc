@@ -1,5 +1,6 @@
 // src/pages/About/About.jsx hoặc src/components/About/About.jsx
 import React from 'react';
+import {useNavigate } from 'react-router-dom';
 
 
 const About = () => {
@@ -12,6 +13,7 @@ const About = () => {
     { name: "Da Lat", cars: "20+ cars" },
     { name: "Quang Ninh", cars: "15+ cars" },
   ];
+  const navigate=useNavigate();
 
   const features = [
     {
@@ -55,7 +57,7 @@ const About = () => {
               <p className="mb-6">
                 Choose between 1000s of private cars for rent at really low prices!
               </p>
-              <button className="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 transition-colors">
+              <button className="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 transition-colors" onClick={()=>navigate("/search_car_result")}>
                 Find a Rental Car Near You
               </button>
             </div>
