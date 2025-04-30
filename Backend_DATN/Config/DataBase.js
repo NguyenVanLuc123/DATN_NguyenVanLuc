@@ -1,6 +1,6 @@
 // src/Config/DataBase.js
 const mysql = require('mysql2/promise');
-require('dotenv').config(); // Đảm bảo rằng biến môi trường được tải
+require('dotenv').config();
 
 const pool = mysql.createPool({
     host: 'localhost',
@@ -8,11 +8,11 @@ const pool = mysql.createPool({
     password: process.env.password,
     database: process.env.database,
     waitForConnections: true,
-    connectionLimit: 10, // Số lượng kết nối tối đa
+    connectionLimit: 10,
     queueLimit: 0
 });
 
-// Kiểm tra kết nối ngay khi module được load
+// Kiểm tra kết nối
 (async () => {
     try {
         const connection = await pool.getConnection();
@@ -23,12 +23,12 @@ const pool = mysql.createPool({
     }
 })();
 
-// Hàm để thực hiện truy vấn
 const connectDatabase = async (query, values) => {
     const [rows] = await pool.execute(query, values);
     return rows;
 };
 
 module.exports = {
-    connectDatabase
+    connectDatabase,
+    pool // 👈 THÊM DÒNG NÀY
 };
