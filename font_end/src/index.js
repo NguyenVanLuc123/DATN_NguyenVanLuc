@@ -7,7 +7,7 @@ import App from './App';
 import './index.css'; // file CSS toàn cục (nếu có)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+
     <App />
-  </React.StrictMode>
+
 );

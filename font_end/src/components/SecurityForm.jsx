@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import toast from 'react-hot-toast';
 const SecurityForm = ({ setUser }) => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,7 +33,8 @@ const SecurityForm = ({ setUser }) => {
             );
 
             if (response.data.success) {
-                setSuccessMessage(response.data.message);
+                setError('');
+                toast.success(response.data.message);
                 setUser(response.data.data);
             } else {
                 setError(response.data.message);

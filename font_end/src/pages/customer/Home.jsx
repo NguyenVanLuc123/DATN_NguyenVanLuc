@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchHomeData } from '../../api/customer/HomeApi';
 import Footer from '../../components/Footer';
 import SearchForm from "../../components/SearchForm";
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate, NavLink,useLocation } from 'react-router-dom';
 import {
     FaMoneyBillWave,
     FaUserFriends,
@@ -11,13 +11,20 @@ import {
     FaHeadset,
     FaImage,
 } from "react-icons/fa";
-
+import toast from 'react-hot-toast';
 const CustomerHome = ({ setUser }) => {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
     const [account, setAccount] = useState(null);
     const navigate = useNavigate();
+    const { state } = useLocation();
+    useEffect(() => {
+      if (state?.toastMessage) {
+        toast.success(state.toastMessage);
 
+        window.history.replaceState({}, document.title);
+      }
+    }, [state]);
     useEffect(() => {
         const fetchData = async () => {
             const response = await fetchHomeData();
@@ -25,10 +32,12 @@ const CustomerHome = ({ setUser }) => {
                 setData(response.data);
                 setUser(response.data); 
                 setAccount(response.account);
-                if(response.account.is_owner===0){
+                const currentPath = window.location.pathname;
+                
+                if(response.account.is_owner===0&& currentPath !== "/customer/home"){
                     navigate("/customer/home");
                 }
-                else {
+                else if(response.account.is_owner !== 0 && currentPath !== "/owner/home") {
                     navigate("/owner/home");
                 }
             }

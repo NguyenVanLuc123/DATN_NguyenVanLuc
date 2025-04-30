@@ -35,10 +35,14 @@ const LoginForm = () => {
         try {
             const response = await loginUser(email, password);
             if (response.data.is_owner===0) {
-                navigate('/customer/home');
+                navigate('/customer/home',{
+                         state: { toastMessage: 'Đăng nhập thành công!' }, replace: true
+                        });
             }
             else if(response.data.is_owner===1){
-                navigate('/owner/home');
+                navigate('/owner/home',{
+                       state: { toastMessage: 'Đăng nhập thành công!' }, replace: true
+                        });
             } else {
                 setMessage(response.message); // Hiển thị thông báo từ phản hồi
             }

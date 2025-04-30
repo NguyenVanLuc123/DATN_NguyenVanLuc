@@ -3,7 +3,7 @@ import axios from "axios";
 import addressData from "../data/address.listJson";
 import { fetchProfileData } from "../api/customer/ProfileApi";
 import { useNavigate } from 'react-router-dom';
-
+import toast from 'react-hot-toast';
 const ProfileForm = ({ setUser }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -98,6 +98,7 @@ const ProfileForm = ({ setUser }) => {
         [name]: file,
         [`${name}Preview`]: previewURL,
       }));
+      
     }
   };
 
@@ -171,7 +172,7 @@ const ProfileForm = ({ setUser }) => {
       );
       if (response.data.success) {
         setError("");
-        setSuccessMessage("Profile updated successfully!");
+        toast.success(response.data.message);
         setUser({ ...formData, img: formData.imgPreview, drivingLicense: formData.drivingLicensePreview }); // Cập nhật user sau khi thành công
       } else {
         setError(response.data.message);
