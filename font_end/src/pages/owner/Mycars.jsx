@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link,useLocation } from 'react-router-dom';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 import Footer from '../../components/Footer';
-
+import toast from 'react-hot-toast';
 function StarRating({ rating }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
@@ -73,7 +73,14 @@ export default function MyCars({ setUser }) {
   const [sort, setSort] = useState('ratingDesc');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(3);
+  const { state } = useLocation();
+  useEffect(() => {
+    if (state?.toastMessage) {
+      toast.success(state.toastMessage);
 
+      window.history.replaceState({}, document.title);
+    }
+  }, [state]);
   useEffect(() => {
     axios.get('http://localhost:3000/api/v1/owner/cars', { withCredentials: true })
       .then(res => {
@@ -117,7 +124,7 @@ export default function MyCars({ setUser }) {
         <div className="flex flex-col md:flex-row justify-between items-center mb-8">
           <h1 className="text-3xl font-extrabold mb-4 md:mb-0">My Cars</h1>
           <div className="flex space-x-4 items-center">
-            <button className="bg-black text-white px-6 py-3 rounded-full font-medium hover:bg-gray-800 transition">Add Car</button>
+            <Link to="/owner/car/create" className="bg-black text-white px-6 py-3 rounded-full font-medium hover:bg-gray-800 transition">Add Car</Link>
             <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-300 rounded px-4 py-2">
               <option value="newest">Newest to Latest</option>
               <option value="oldest">Latest to Newest</option>

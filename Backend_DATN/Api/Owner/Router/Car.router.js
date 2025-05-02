@@ -14,4 +14,10 @@ router.put('/owner/cars/edit/:id',auth.AuthUser,upload.fields([
   { name: 'back_img', maxCount: 1 },
   { name: 'right_img', maxCount: 1 }
 ]),uploadCloud.upload,Car_controller.editCar)
+router.post('/owner/cars/create',auth.AuthUser,upload.fields([
+  { name: 'front_img', maxCount: 1 },
+  { name: 'left_img', maxCount: 1 },
+  { name: 'back_img', maxCount: 1 },
+  { name: 'right_img', maxCount: 1 }
+]),uploadCloud.upload,Car_controller.CreateCar)
 module.exports=router;

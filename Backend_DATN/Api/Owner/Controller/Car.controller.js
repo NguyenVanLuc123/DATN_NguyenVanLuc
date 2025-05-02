@@ -34,16 +34,17 @@ module.exports.editCar = async (req, res) => {
   // Sử dụng transaction để cập nhật 3 bảng: car, car_additional_function, car_term_of_use
   const pool = database.pool; // pool của mysql2
   const conn = await pool.getConnection();
+  console.log(req.user)
   try {
     const {
-      name, license_plate, brand, MFG, transmission_type, fuel_type,
+       license_plate, brand, MFG, transmission_type, fuel_type,
       color, model, seat, mileage, fuel_consumption, description,
       base_price, required_deposit, status, location,
       additional_function_id, term_of_use_id, front_img, back_img,
       left_img, right_img
     } = req.body;
     const car_id = req.params.id;
-
+    const name = brand + " " + model;
     await conn.beginTransaction();
 
     // Khóa bản ghi cũ
@@ -98,3 +99,82 @@ module.exports.editCar = async (req, res) => {
     conn.release();
   }
 };
+module.exports.CreateCar = async (req, res) => {
+  const user = req.user;
+  if (user.is_owner === 0) {
+    return res.status(403).json({ success: false, message: "Bạn không có quyền truy cập" });
+  }
+
+  const {
+    license_plate, brand, MFG, transmission_type, fuel_type,
+    color, model, seat, mileage, fuel_consumption, description,
+    base_price, required_deposit, status, location,
+    additional_function_id, term_of_use_id,
+    front_img, back_img, left_img, right_img
+  } = req.body;
+
+  const name = `${brand} ${model}`;
+  const final_front_img  = front_img?.trim()  || "";
+  const final_back_img   = back_img?.trim()   || "";
+  const final_left_img   = left_img?.trim()   || "";
+  const final_right_img  = right_img?.trim()  || "";
+
+  const pool = database.pool;
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1) INSERT INTO car
+    const insertCarSql = `
+  INSERT INTO car (
+    name, license_plate, brand, color, seat, MFG,
+    mileage, status, price, model, fuel_type,
+    transmission_type, description, front_img, back_img,
+    left_img, right_img, location, required_deposit,
+    fuel_consumption, rides, rating, owner_id
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+const [insertResult] = await conn.query(insertCarSql, [
+  name, license_plate, brand, color, seat, MFG,
+  mileage, status, base_price, model, fuel_type,
+  transmission_type, description,
+  final_front_img, final_back_img, final_left_img, final_right_img,
+  location, required_deposit, fuel_consumption,
+  0, 5, user.id // rides = 0, rating = 5, owner_id = user.id
+]);
+
+    const car_id = insertResult.insertId;
+
+    // 2) INSERT INTO car_additional_function (nếu có)
+    if (additional_function_id) {
+      await conn.query(
+        'INSERT INTO car_additional_function (car_id, additional_function_id) VALUES (?, ?)',
+        [car_id, additional_function_id]
+      );
+    }
+
+    // 3) INSERT INTO car_term_of_use (nếu có)
+    if (term_of_use_id) {
+      await conn.query(
+        'INSERT INTO car_term_of_use (car_id, term_of_use_id) VALUES (?, ?)',
+        [car_id, term_of_use_id]
+      );
+    }
+
+    await conn.commit();
+    res.status(201).json({
+      success: true,
+      message: 'Tạo xe thành công',
+      data: { car_id }
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error('Lỗi CreateCar (transaction):', error);
+    res.status(500).json({ success: false, message: 'Lỗi server khi tạo xe' });
+  } finally {
+    conn.release();
+  }
+};
+

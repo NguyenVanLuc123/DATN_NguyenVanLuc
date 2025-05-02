@@ -15,6 +15,7 @@ import CarDetails from './pages/CarDetails';
 import MyCars from './pages/owner/Mycars';
 import EditCars from './pages/owner/Editcar';
 import { Toaster } from 'react-hot-toast';
+import CreateCar from './pages/owner/CreateCar';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -35,6 +36,7 @@ function App() {
           <Route path="/details/:id" element={<CarDetails setUser={setUser} />} />
           <Route path="/owner/cars" element={<MyCars setUser={setUser} />} />
           <Route path="/owner/car/:id" element={<EditCars setUser={setUser} />} />
+          <Route path="/owner/car/create" element={<CreateCar setUser={setUser} />} />
         </Routes>
         {/* Thêm Toaster để hiển thị toast notifications */}
         <Toaster position="top-right" toastOptions={{ duration: 5000 }} />

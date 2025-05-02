@@ -26,7 +26,6 @@ export default function EditCarDetails({ setUser }) {
   const [loading, setLoading] = useState(false);
   const [car, setCar] = useState(null);
   const [form, setForm] = useState({
-    name: '',
     license_plate: '',
     brand: '',
     MFG: '',
@@ -208,14 +207,7 @@ export default function EditCarDetails({ setUser }) {
                     <div className="lg:w-1/3 bg-white rounded-lg shadow-lg p-6 flex flex-col">
                         {/* Input chỉnh sửa tên xe */}
                         <div className="mb-4">
-                            <label htmlFor="name" className="block font-medium mb-1">Tên xe</label>
-                            <input
-                                id="name"
-                                type="text"
-                                value={form.name}
-                                onChange={handleInput('name')}
-                                className="w-full text-2xl font-bold p-2 border rounded"
-                            />
+                        <h2 className="text-2xl font-bold text-gray-800">{car.name}</h2>
                         </div>
                         <div className="flex items-center mb-2 space-x-4">
                             <StarRating rating={Math.round((car.rating || 0) * 2) / 2} />
