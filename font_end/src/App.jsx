@@ -16,6 +16,9 @@ import MyCars from './pages/owner/Mycars';
 import EditCars from './pages/owner/Editcar';
 import { Toaster } from 'react-hot-toast';
 import CreateCar from './pages/owner/CreateCar';
+import BookingForm from './pages/customer/Booking';
+import MyBookings from './pages/customer/MyBooking';
+import BookingDetails from './pages/customer/BookingDetail';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -30,6 +33,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ResetPasswordPage />} />
           <Route path="/customer/home" element={<HomeUser setUser={setUser} />} />
+          <Route path="/customer/booking/:id" element={<BookingForm setUser={setUser} />} />
+          <Route path="/customer/bookings" element={<MyBookings setUser={setUser} />} />
+          <Route path="/customer/bookingdetail/:id" element={<BookingDetails setUser={setUser} />} />
           <Route path="/profile" element={<Profile setUser={setUser} />} />
           <Route path="/owner/home" element={<HomeUser setUser={setUser} />} />
           <Route path="/search_car_result" element={<SearchCarResult setUser={setUser} />} />
@@ -37,6 +43,7 @@ function App() {
           <Route path="/owner/cars" element={<MyCars setUser={setUser} />} />
           <Route path="/owner/car/:id" element={<EditCars setUser={setUser} />} />
           <Route path="/owner/car/create" element={<CreateCar setUser={setUser} />} />
+          
         </Routes>
         {/* Thêm Toaster để hiển thị toast notifications */}
         <Toaster position="top-right" toastOptions={{ duration: 5000 }} />

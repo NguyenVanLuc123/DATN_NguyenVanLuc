@@ -132,7 +132,7 @@ const CustomerHome = ({ setUser }) => {
                             Make more money on your car right now
                         </h2>
                         <NavLink
-                            to="/list-car"
+                            to="/owner/cars"
                             className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded"
                         >
                             List your car today

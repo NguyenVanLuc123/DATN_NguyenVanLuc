@@ -32,7 +32,7 @@ function SearchCarResult({ setUser }) {
   const city = searchParams.get('city');
   const district = searchParams.get('district');
   const ward = searchParams.get('ward');
-
+  const [pickUpLocation,setPickupLocation]=useState('');
   const [cars, setCars] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [user, setLocalUser] = useState(null);
@@ -49,6 +49,7 @@ function SearchCarResult({ setUser }) {
       city && params.append('city', city);
       district && params.append('district', district);
       ward && params.append('ward', ward);
+      setPickupLocation(params.toString());
       try {
         const resp = await axios.get(
           `http://localhost:3000/api/v1/customer/search_car?${params.toString()}`,
@@ -95,12 +96,12 @@ function SearchCarResult({ setUser }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-       <nav className="bg-white shadow-sm p-4 text-sm text-gray-600 flex items-center ml-20">
-    <div className="flex items-center">
+       <nav className="bg-white shadow-sm p-4 text-sm text-gray-700 flex items-center space-x-4 container mx-auto rounded-b-lg">
+    
       <Link to="/customer/home" className="hover:underline text-blue-600 ">Home</Link>
-      <span className="mx-2">&gt;</span>
-      <span className="font-semibold ml-1">Search Results</span>
-    </div>
+      <span className="text-gray-400">/</span>
+      <span className="font-semibold text-gray-800">Search Results</span>
+    
   </nav>
       <SearchForm />
       <main className="flex-grow container mx-auto px-4 py-6">
@@ -161,7 +162,9 @@ function SearchCarResult({ setUser }) {
                 <p className="mt-2 font-bold text-red-600">{car.price} USD/Day</p>
                 <span className={`mt-1 text-sm capitalize ${car.status === 'available' ? 'text-green-600' : 'text-red-600'}`}>{car.status}</span>
                 <div className="mt-auto flex space-x-2">
-                  <button onClick={() => navigate('/book', { state: { car, user } })} className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Rent now</button>
+                  <button onClick={() => navigate(`/customer/booking/${car.id}`,{
+                         state: { PickUpLocation:pickUpLocation }, replace: true
+                        })} className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Rent now</button>
                   <button onClick={() => navigate(`/details/${car.id}`)}className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-blue-600">View details</button>
                 </div>
               </div>

@@ -11,7 +11,6 @@ const check_Form=require('../../../validation/Customers/FormRegister.validation'
 const auth= require('../../../middleware/auth.middleware');
 router.get('/customer/profile',auth.AuthUser, profile_controller.getprofile);
 router.put('/customer/profile',auth.AuthUser,upload.fields([
-    { name: 'img', maxCount: 1 },
     { name: 'drivingLicense', maxCount: 1 }
   ]),uploadCloud.upload,check_Form.checkFormProfile,profile_controller.postprofile)
 router.put('/customer/changepassword',auth.AuthUser,profile_controller.changePassword)

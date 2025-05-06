@@ -1,0 +1,9 @@
+<!DOCTYPE html><html><body>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const paid   = params.get('paid') === 'true';
+      window.opener.postMessage(paid ? 'VNPAY_SUCCESS' : 'VNPAY_FAIL', window.location.origin);
+      window.close();
+    </script>
+    </body></html>
+    

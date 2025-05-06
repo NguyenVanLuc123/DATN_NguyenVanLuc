@@ -58,6 +58,9 @@ module.exports.editCar = async (req, res) => {
     const final_left_img  = left_img?.trim()  ? left_img  : old.left_img;
     const final_right_img = right_img?.trim() ? right_img : old.right_img;
 
+    if(status==='busy'){
+      res.status(422).json({ success: false, message:'Bạn không tự cập nhật về busy được' });
+    }
     // 1) UPDATE car
     const updateCarSql = `
       UPDATE car SET

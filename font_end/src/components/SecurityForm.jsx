@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
 const SecurityForm = ({ setUser }) => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -9,15 +10,16 @@ const SecurityForm = ({ setUser }) => {
     const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
     const handleDiscard = () => {
-        navigate('/customer/home'); // Chuyển hướng về trang home
+        navigate('/customer/home');
     };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSuccessMessage('');
 
-        // Kiểm tra xem confirmPassword có khớp với newPassword không
         if (newPassword !== confirmPassword) {
             setError('Mật khẩu xác nhận không khớp.');
             return;
@@ -48,41 +50,65 @@ const SecurityForm = ({ setUser }) => {
     };
 
     return (
-<form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md w-[800px] mx-auto">
+        <form 
+            onSubmit={handleSubmit} 
+            className="bg-white p-4 sm:p-6 rounded-lg shadow-md w-full sm:w-[600px] md:w-[700px] lg:w-[800px] mx-auto my-4 sm:my-8"
+        >
+            <h2 className="text-xl sm:text-2xl font-semibold mb-4">Change Password</h2>
+            
+            {/* Error and Success Messages */}
+            {error && (
+                <div className="text-red-500 mb-4 text-sm sm:text-base">
+                    {error}
+                </div>
+            )}
+            {successMessage && (
+                <div className="text-green-500 mb-4 text-sm sm:text-base">
+                    {successMessage}
+                </div>
+            )}
 
-            <h2 className="text-2xl font-semibold mb-4">Change Password</h2>
-            {error && <div className="text-red-500 mb-4">{error}</div>}
-            {successMessage && <div className="text-green-500 mb-4">{successMessage}</div>}
-
+            {/* New Password Field */}
             <div className="mb-4">
-                <label className="block font-medium">New Password:</label>
+                <label className="block font-medium text-sm sm:text-base mb-1 sm:mb-2">
+                    New Password:
+                </label>
                 <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     required
                 />
             </div>
 
+            {/* Confirm Password Field */}
             <div className="mb-4">
-                <label className="block font-medium">Confirm Password:</label>
+                <label className="block font-medium text-sm sm:text-base mb-1 sm:mb-2">
+                    Confirm Password:
+                </label>
                 <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     required
                 />
             </div>
 
-            <div className="flex justify-between mt-6">
-                <button type="button" className="text-red-500 hover:underline" onClick={handleDiscard}>
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row justify-between gap-4 sm:gap-0 mt-6">
+                <button 
+                    type="button" 
+                    className="text-red-500 hover:underline text-sm sm:text-base order-2 sm:order-1" 
+                    onClick={handleDiscard}
+                >
                     Discard
                 </button>
                 <button
                     type="submit"
-                    className={`bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm sm:text-base order-1 sm:order-2 
+                        ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={loading}
                 >
                     {loading ? 'Changing...' : 'Change Password'}
