@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import Slider from 'react-slick';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 import Footer from '../../components/Footer';
 import addressData from '../../data/address.listJson';
 import toast from 'react-hot-toast';
-
+import { socket } from "../../socket.io/socket";
 function StarRating({ rating }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
@@ -25,6 +25,7 @@ export default function EditCarDetails({ setUser }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [car, setCar] = useState(null);
+  const [status, setStatus] = useState("")
   const [form, setForm] = useState({
     license_plate: '',
     brand: '',
@@ -52,14 +53,44 @@ export default function EditCarDetails({ setUser }) {
   const [additional, setAdditional] = useState([]);
   const [terms, setTerms] = useState([]);
   const [activeTab, setActiveTab] = useState('basic');
-
+  const { state } = useLocation();
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [ward, setWard] = useState('');
-
+  const [booking, setBooking] = useState();
   const [provinces] = useState(addressData.map(item => item.city));
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
+
+  //socket
+  useEffect(() => {
+    socket.on("SERVER_BOOKING", (data) => {
+
+      setBooking(data.BookingStatus)
+
+    });
+
+
+    socket.on("SERVER_CANCEL_CAR", (data) => {
+      setStatus("available")
+      setBooking(data.BookingStatus)
+
+
+    });
+
+       socket.on("SERVER_RETURN_CAR", (data) => {
+
+      setBooking(data.BookingStatus)
+
+    });
+
+    // cleanup tránh lặp listener khi component unmount
+    return () => socket.off("receive_message");
+  }, []);
+
+    useEffect(() => {
+    setStatus("")
+  }, [form]);
 
   useEffect(() => {
     axios.get(`http://localhost:3000/api/v1/customer/search_car/${id}`, { withCredentials: true })
@@ -68,7 +99,9 @@ export default function EditCarDetails({ setUser }) {
         const c = data.data[0];
         setCar(c);
         if (data.user?.length) setUser(data.user[0]);
-
+        if (data.BookingStatus) {
+          setBooking(data.BookingStatus.status);
+        }
         const [cityVal, districtVal, wardVal] = (c.location || '').split(' - ');
         setCity(cityVal);
         setDistrict(districtVal);
@@ -151,9 +184,9 @@ export default function EditCarDetails({ setUser }) {
     const formDataToSend = new FormData();
     // Gán chỉ 1 lần base_price và required_deposit
     for (const key in form) {
-      if (['front_img','left_img','back_img','right_img'].includes(key)) {
+      if (['front_img', 'left_img', 'back_img', 'right_img'].includes(key)) {
         if (form[key] instanceof File) formDataToSend.append(key, form[key]);
-      } else if (!key.endsWith('Preview')  && key !== 'required_deposit') {
+      } else if (!key.endsWith('Preview') && key !== 'required_deposit') {
         formDataToSend.append(key, form[key]);
       }
     }
@@ -181,17 +214,79 @@ export default function EditCarDetails({ setUser }) {
       .finally(() => setLoading(false));
   };
 
+
+  const handleConfirm_deposit = async () => {
+    try {
+      socket.emit("CONFIRM_DEPOSIT", car.id);
+      const response = await axios.put(
+        `http://localhost:3000/api/v1/owner/booking/confirmDeposit/${id}`,
+        null,
+        {
+          withCredentials: true
+        }
+      );
+      if (response.data.success) {
+        setBooking(response.data.booking.status);
+        toast.success(response.data.message);
+        console.log(response.data.booking.status)
+      }
+
+
+      // đây chỉ chạy khi status code 2xx
+
+    } catch (error) {
+      // error.response chỉ có khi server trả 4xx/5xx
+      if (error.response && error.response.data) {
+        // server trả về { success: false, message: '...' }
+        toast.error(error.response.data.message);
+      } else {
+        // lỗi mạng hoặc không có response
+        toast.error('Có lỗi xảy ra khi đặt xe. Vui lòng thử lại!');
+      }
+      console.error('Booking failed:', error);
+    }
+  }
+  const handleConfirm_payment = async () => {
+    try {
+      const response = await axios.put(
+        `http://localhost:3000/api/v1/owner/booking/ConfirmPayment/${car.id}`,
+        null,
+        {
+          withCredentials: true
+        }
+      );
+      if (response.data.success) {
+         setStatus("available")
+        setBooking(response.data.bookingstatus);
+        toast.success(response.data.message);
+      }
+
+
+      // đây chỉ chạy khi status code 2xx
+
+    } catch (error) {
+      // error.response chỉ có khi server trả 4xx/5xx
+      if (error.response && error.response.data) {
+        // server trả về { success: false, message: '...' }
+        toast.error(error.response.data.message);
+      } else {
+        // lỗi mạng hoặc không có response
+        toast.error('Có lỗi xảy ra khi đặt xe. Vui lòng thử lại!');
+      }
+      console.error('Booking failed:', error);
+    }
+  }
   const images = [car.front_img, car.left_img, car.back_img, car.right_img].filter(Boolean);
   const settings = { dots: true, arrows: true, infinite: false, speed: 500, slidesToShow: 1, slidesToScroll: 1, draggable: true, swipeToSlide: true };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm p-4 text-sm text-gray-600 flex items-center ml-4 sm:ml-20">
+      <nav className="bg-white shadow-sm p-4 text-sm text-gray-600 flex items-center space-x-4 container mx-auto rounded-b-lg">
         <Link to="/owner/home" className="hover:underline text-blue-600">Home</Link>
-        <span className="mx-2">&gt;</span>
+        <span className="text-gray-400">/</span>
         <Link to="/owner/cars" className="hover:underline text-blue-600">My Cars</Link>
-        <span className="mx-2">&gt;</span>
-        <span className="font-semibold">Edit Details</span>
+        <span className="text-gray-400">/</span>
+        <span className="font-semibold text-gray-800">Edit Details</span>
       </nav>
 
       <main className="container mx-auto p-4 sm:p-6">
@@ -202,40 +297,109 @@ export default function EditCarDetails({ setUser }) {
             <Slider {...settings} className="h-48 sm:h-64">
               {images.map((src, i) => (
                 <div key={i} className="h-48 sm:h-64 flex items-center justify-center bg-gray-200">
-                  <img src={src} alt={`Slide ${i+1}`} className="object-cover w-full h-full" />
+                  <img src={src} alt={`Slide ${i + 1}`} className="object-cover w-full h-full" />
                 </div>
               ))}
             </Slider>
           </div>
 
           {/* Car info */}
-          <div className="w-full lg:w-1/3 bg-white rounded-lg shadow-lg p-4 sm:p-6">
-            <div className="mb-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{car.name}</h2>
+          <div className="w-full lg:w-1/3 bg-white rounded-2xl shadow-md p-6 flex flex-col space-y-4">
+            {/* Header */}
+            <div className="border-b pb-2">
+              <h2 className="text-2xl font-bold text-gray-800">{car.name}</h2>
             </div>
-            <div className="flex items-center mb-2 space-x-4">
+
+            {/* Rating & Rides */}
+            <div className="flex items-center space-x-3">
               <StarRating rating={Math.round((car.rating || 0) * 2) / 2} />
-              <span className="font-medium">{car.rides} rides</span>
+              <span className="text-gray-600 font-medium">{car.rides} rides</span>
             </div>
-            <p className="mb-2"><span className="font-medium">Price:</span> <span className="text-red-600">{form.base_price} VND/day</span></p>
-            <p className="mb-4"><span className="font-medium">Location:</span> {`${city} - ${district} - ${ward}`}</p>
-            <div className="flex items-center gap-2 mb-4">
-              <label className="font-medium">Status</label>
-              <select value={form.status} onChange={handleInput('status')} className={`border rounded p-1 font-semibold ${form.status==='available'?'text-green-600':form.status==='busy'?'text-orange-500':'text-gray-500'}`}>
-                <option value="available">Available</option>
-                <option value="busy">Busy</option>
-                <option value="stopped">Stopped</option>
-              </select>
-              <button
-                type="submit"
-                onClick={handleSave}
-                className={`bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ${loading?'opacity-50 cursor-not-allowed':''}`}
-                disabled={loading}
-              >
-                {loading ? 'Updating...' : 'Save'}
-              </button>
+
+            {/* Price & Location */}
+            <div className="space-y-1">
+              <p>
+                <span className="font-medium">Price:</span>{' '}
+                <span className="text-red-600 font-semibold">{form.base_price} VND/day</span>
+              </p>
+              <p>
+                <span className="font-medium">Location:</span>{' '}
+                <span className="text-gray-700">{`${city} - ${district} - ${ward}`}</span>
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-auto space-y-3">
+              <div className="flex items-center space-x-2">
+                <label className="whitespace-nowrap font-medium">Status:</label>
+                <select
+                  value={status !== "" ? status : form.status}
+                  onChange={handleInput('status')}
+                  className={`
+                  border 
+                  rounded-lg 
+                  px-3 py-1 
+                  font-semibold 
+                  focus:outline-none focus:ring-2 focus:ring-blue-300
+                  ${(status !== "" ? status : form.status) === 'available'
+                      ? 'text-green-600'
+                      : (status !== "" ? status : form.status) === 'busy'
+                        ? 'text-orange-500'
+                        : (status !== "" ? status : form.status) === 'stopped'
+                          ? 'text-gray-500'
+                          : ''
+                    }
+                `}
+                >
+                  <option value="available">Available</option>
+                  <option value="busy">Busy</option>
+                  <option value="stopped">Stopped</option>
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  onClick={handleSave}
+                  disabled={loading}
+                  className={`
+          flex-1 
+          bg-blue-500 text-white 
+          px-4 py-2 
+          rounded-lg 
+          hover:bg-blue-600 
+          transition 
+          ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+        `}
+                >
+                  {loading ? 'Updating...' : 'Save'}
+                </button>
+
+                {booking === "PENDING_DEPOSIT" && (
+                  <button onClick={(handleConfirm_deposit)} className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition">
+                    Confirm deposit
+                  </button>
+                )}
+
+                {booking === "PENDING_PAYMENT" && (
+                  <button onClick={handleConfirm_payment} className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition">
+                    Confirm payment
+                  </button>
+                )}
+                {booking === "CONFIRMED" && (
+                  <button className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition">
+                    CONFIRMED
+                  </button>
+                )}
+                {booking === "IN_PROGRESS" && (
+                  <button className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full transition">
+                    IN_PROGRESS
+                  </button>
+                )}
+              </div>
             </div>
           </div>
+
         </div>
 
         {/* Tabs section */}
@@ -246,11 +410,10 @@ export default function EditCarDetails({ setUser }) {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 sm:py-3 text-center text-sm sm:text-base ${
-                  activeTab === tab 
-                    ? 'border-b-2 border-blue-600 text-blue-600' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`flex-1 py-2 sm:py-3 text-center text-sm sm:text-base ${activeTab === tab
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>

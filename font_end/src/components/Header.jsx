@@ -79,12 +79,13 @@ const Header = ({ user, setUser }) => {
                                             <>
                                                 <Link to="/customer/bookings" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>My bookings</Link>
                                                 <Link to="/wallet" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>My Wallet</Link>
+                                                <Link to="/feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>Feedback</Link>
                                             </>
                                         ) : (
                                             <>
                                                 <Link to="/owner/cars" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>My cars</Link>
                                                 <Link to="/wallet" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>My Wallet</Link>
-                                                <Link to="/reports" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>My Reports</Link>
+                                                <Link to="/feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-200" onClick={() => setDropdownOpen(false)}>My Reports</Link>
                                             </>
                                         )}
 

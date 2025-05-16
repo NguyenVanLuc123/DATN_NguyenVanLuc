@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate ,useLocation} from 'react-router-dom';
 import { FiGrid, FiList } from "react-icons/fi";
 import Footer from '../components/Footer';
 import SearchForm from "./SearchForm";
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
-
+import toast from 'react-hot-toast';
 function StarRating({ rating }) {
   const stars = [];
   const fullStars = Math.floor(rating); // sao đầy
@@ -32,7 +32,7 @@ function SearchCarResult({ setUser }) {
   const city = searchParams.get('city');
   const district = searchParams.get('district');
   const ward = searchParams.get('ward');
-  const [pickUpLocation,setPickupLocation]=useState('');
+  const [pickUpLocation, setPickupLocation] = useState('');
   const [cars, setCars] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [user, setLocalUser] = useState(null);
@@ -43,6 +43,15 @@ function SearchCarResult({ setUser }) {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const { state } = useLocation();
+  useEffect(() => {
+    if (state?.toastMessage) {
+      console.log(2)
+      toast.success(state.toastMessage);
+
+      window.history.replaceState({}, document.title);
+    }
+  }, [state]);
   useEffect(() => {
     const fetchCars = async () => {
       const params = new URLSearchParams();
@@ -96,13 +105,13 @@ function SearchCarResult({ setUser }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-       <nav className="bg-white shadow-sm p-4 text-sm text-gray-700 flex items-center space-x-4 container mx-auto rounded-b-lg">
-    
-      <Link to="/customer/home" className="hover:underline text-blue-600 ">Home</Link>
-      <span className="text-gray-400">/</span>
-      <span className="font-semibold text-gray-800">Search Results</span>
-    
-  </nav>
+      <nav className="bg-white shadow-sm p-4 text-sm text-gray-700 flex items-center space-x-4 container mx-auto rounded-b-lg">
+
+        <Link to="/customer/home" className="hover:underline text-blue-600 ">Home</Link>
+        <span className="text-gray-400">/</span>
+        <span className="font-semibold text-gray-800">Search Results</span>
+
+      </nav>
       <SearchForm />
       <main className="flex-grow container mx-auto px-4 py-6">
         {/* Breadcrumb/Search Summary */}
@@ -162,10 +171,21 @@ function SearchCarResult({ setUser }) {
                 <p className="mt-2 font-bold text-red-600">{car.price} USD/Day</p>
                 <span className={`mt-1 text-sm capitalize ${car.status === 'available' ? 'text-green-600' : 'text-red-600'}`}>{car.status}</span>
                 <div className="mt-auto flex space-x-2">
-                  <button onClick={() => navigate(`/customer/booking/${car.id}`,{
-                         state: { PickUpLocation:pickUpLocation }, replace: true
-                        })} className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Rent now</button>
-                  <button onClick={() => navigate(`/details/${car.id}`)}className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-blue-600">View details</button>
+                  <button
+                    onClick={() => {
+                      // 1) lưu vào localStorage
+                      localStorage.setItem('Location', pickUpLocation);
+                      // 2) navigate như cũ
+                      navigate(
+                        `/customer/booking/${car.id}`,
+                        { state: { PickUpLocation: pickUpLocation }, replace: true }
+                      );
+                    }}
+                    className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                  >
+                    Rent now
+                  </button>
+                  <button onClick={() => navigate(`/details/${car.id}`)} className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-blue-600">View details</button>
                 </div>
               </div>
             ))}
@@ -193,16 +213,29 @@ function SearchCarResult({ setUser }) {
                     <td className="px-6 py-4 whitespace-nowrap"><img src={car.front_img || '/placeholder.jpg'} alt={car.name} className="h-12 w-20 object-cover rounded" /></td>
                     <td className="px-6 py-4 whitespace-nowrap">{car.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap"> <div className="text-sm text-gray-600 flex flex-col">
-                  {car.rating
-                    ? <StarRating rating={Math.round(car.rating * 2) / 2} />
-                    : 'No ratings'}
-                </div></td>
+                      {car.rating
+                        ? <StarRating rating={Math.round(car.rating * 2) / 2} />
+                        : 'No ratings'}
+                    </div></td>
                     <td className="px-6 py-4 whitespace-nowrap">{car.rides ?? 0}</td>
                     <td className="px-6 py-4 whitespace-nowrap ">{car.price} USD</td>
                     <td className="px-6 py-4 whitespace-nowrap">{car.location}</td>
                     <td className="px-6 py-4 whitespace-nowrap capitalize">{car.status}</td>
                     <td className="px-6 py-4 whitespace-nowrap space-x-2">
-                      <button onClick={() => navigate('/book', { state: { car, user } })} className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Rent now</button>
+                      <button
+                        onClick={() => {
+                          // 1) lưu vào localStorage
+                          localStorage.setItem('Location', pickUpLocation);
+                          // 2) navigate như cũ
+                          navigate(
+                            `/customer/booking/${car.id}`,
+                            { state: { PickUpLocation: pickUpLocation }, replace: true }
+                          );
+                        }}
+                        className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                      >
+                        Rent now
+                      </button>
                       <button onClick={() => navigate(`/details/${car.id}`, { state: { car, user } })} className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">View details</button>
                     </td>
                   </tr>

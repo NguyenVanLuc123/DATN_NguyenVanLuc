@@ -115,12 +115,12 @@ export default function CreateCar({ setUser }) {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50">
-            <nav className="bg-white shadow-sm p-4 text-sm text-gray-600 flex items-center ml-4 sm:ml-20">
-                <div className="flex items-center">
+            <nav className="bg-white shadow-sm p-4 text-sm text-gray-600 flex items-center space-x-4 container mx-auto rounded-b-lg">
+                
                     <Link to="/owner/cars" className="hover:underline text-blue-600">My cars</Link>
-                    <span className="mx-2">&gt;</span>
-                    <span>Add a car</span>
-                </div>
+                    <span className="text-gray-400">/</span>
+                    <span className="font-semibold text-gray-800">Add a car</span>
+                
             </nav>
             <main className="flex-grow container mx-auto px-4 sm:px-6 py-4 sm:py-8">
                 <div className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Add a car</div>

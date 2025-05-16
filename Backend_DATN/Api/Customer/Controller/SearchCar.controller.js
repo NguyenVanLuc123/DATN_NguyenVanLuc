@@ -125,6 +125,7 @@ module.exports.getCarByid = async (req, res) => {
 
     // Thực thi truy vấn
 
+    const BookingStatus= await database.connectDatabase('select status from booking where car_id =? and status Not IN ("STOPPED","COMPLETED")',[id])
 
     const results = await database.connectDatabase(sql, [ id]);
     if (userResult.length > 0) {
@@ -139,6 +140,7 @@ module.exports.getCarByid = async (req, res) => {
       results_team_of_use = await database.connectDatabase(sql_team_of_user, [id]);
     }
 
+    
   
 
     if (results.length > 0) {
@@ -148,7 +150,8 @@ module.exports.getCarByid = async (req, res) => {
         data: results,
         additonal: results_additonal,
         team_of_user: results_team_of_use,
-        user: userResult
+        user: userResult,
+        BookingStatus:BookingStatus[0]
       });
     } else {
       return res.status(404).json({

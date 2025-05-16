@@ -10,6 +10,7 @@ router.post('/login',FormRegisterValidation.login,Usercontroller.login);
 router.post('/forgotPassword',Usercontroller.forgotPassword);
 router.post('/otp',Usercontroller.otpPassword);
 router.patch('/changePassword',Usercontroller.ChangePassword);
-router.get('/logout',auth.AuthUser,Usercontroller.logout)
-
+router.get('/logout',auth.AuthUser,Usercontroller.logout);
+router.get('/wallet',auth.AuthUser,Usercontroller.wallet);
+router.post("/findTransction",auth.AuthUser,Usercontroller.findtransaction)
 module.exports=router;

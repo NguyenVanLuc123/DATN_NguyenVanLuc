@@ -11,7 +11,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import Footer from '../../components/Footer';
 import toast from 'react-hot-toast';
-
+import { socket } from "../../socket.io/socket";
 const BookingForm = ({ setUser }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,6 +20,7 @@ const BookingForm = ({ setUser }) => {
   const [renterInfo, setRenterInfo] = useState(null);
   const [sameAsRenter, setSameAsRenter] = useState(false);
   const [pickupDateTime, setPickupDateTime] = useState(null);
+  const [days, setDays] = useState(null);
   const [returnDateTime, setReturnDateTime] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [bookingNumber, setBookingNumber] = useState('');
@@ -29,26 +30,35 @@ const BookingForm = ({ setUser }) => {
   const [bankPaid, setBankPaid] = useState(false);
   const popupRef = useRef(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-
+  const [isPayingViaVnpay, setIsPayingViaVnpay] = useState(false);
   // State cho địa chỉ
   const [selectedProvince, setSelectedProvince] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
-  const [selectedWard, setSelectedWard] = useState('');
-  const [pickUpLocation, setPickupLocation] = useState('');
-  const [location, setLocation] = useState('');
-  const [driverInfo, setDriverInfo] = useState({
-    fullName: '',
-    dateOfBirth: '',
-    phoneNumber: '',
-    email: '',
-    nationalId: '',
-    drivingLicense: '',
-    city: '',
-    district: '',
-    ward: ''
+  const [user_id,setUserid]=useState("");
+  const [driverInfo, setDriverInfo] = useState(() => {
+    const saved = localStorage.getItem('driverInfo');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        localStorage.removeItem('driverInfo');
+      }
+    }
+    return {
+      fullName: '',
+      dateOfBirth: '',
+      phoneNumber: '',
+      email: '',
+      nationalId: '',
+      drivingLicense: '',
+      city: '',
+      district: '',
+      ward: ''
+    };
   });
+  
 
   // Cấu hình cho image slider
   const sliderSettings = {
@@ -61,21 +71,85 @@ const BookingForm = ({ setUser }) => {
     autoplaySpeed: 3000
   };
 
-  const { state } = useLocation();
+  const { state,search } = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { search } = useLocation();
-  useEffect(() => {
-    const params = new URLSearchParams(search);
-    const paid = params.get('paid') === 'true';
-    const step = Number(params.get('step')) || 1;
+  const [selectedWard, setSelectedWard] = useState('');
+  const [location, setLocation] = useState(() => state?.PickUpLocation ||'');
 
-    setBankPaid(paid);         // bật/tắt nút bankPaid
-    setCurrentStep(step);      // chuyển luôn sang bước 2 nếu step=2
+  // 2) pickupLocation: "city-district-ward"
+  const [pickUpLocation, setPickupLocation] = useState(() => {
+    if (!state?.PickUpLocation) return '';
+    const params = new URLSearchParams(state.PickUpLocation);
+    const city     = params.get('city');
+    const district = params.get('district');
+    const ward     = params.get('ward');
+    return [city, district, ward].filter(Boolean).join('-');
+  });
+  useEffect(() => {
+   
+    const params = new URLSearchParams(search);
+    const paidParam = params.get('paid') === 'true';
+    const stepParam = Number(params.get('step')) || 1;
+  
+    // đọc từ localStorage nếu không có param
+    const paidLS = localStorage.getItem('paymentCompleted') === 'true';
+    const methodLS = localStorage.getItem('selectedPaymentMethod') || '';
+  
+    const paid = paidParam || paidLS;
+    setBankPaid(paid);
+    setPaymentCompleted(paid);
+  
+    // set lại phương thức nếu có trong LS
+    if (methodLS) setSelectedPaymentMethod(methodLS);
+  
+    // quyết định bước hiện tại
+    if (paid && stepParam < 2) {
+      setCurrentStep(2);
+    } else {
+      setCurrentStep(stepParam);
+    }
   }, [search]);
+  useEffect(() => {
+    if (sameAsRenter ) {
+      const info = {
+        fullName: renterInfo.name,
+        dateOfBirth: renterInfo.date_of_birth?.split('T')[0] || '',
+        phoneNumber: renterInfo.phone_number,
+        email: renterInfo.email,
+        nationalId: renterInfo.national_id,
+        drivingLicense: renterInfo.driving_license,
+        city: renterInfo.address?.split(' - ')[0] || '',
+        district: renterInfo.address?.split(' - ')[1] || '',
+        ward: renterInfo.address?.split(' - ')[2] || ''
+      };
+      setDriverInfo(info);
+      localStorage.setItem('driverInfo', JSON.stringify(info));
+    }
+  }, [sameAsRenter]);
+  // 📌 Lưu driverInfo
+useEffect(() => {
+  localStorage.setItem('driverInfo', JSON.stringify(driverInfo));
+}, [driverInfo]);
+
+useEffect(() => {
+  const car_id_save=localStorage.getItem('car_id')
+  if(car_id_save){
+    navigate(`/customer/booking/${car_id_save}`)
+  }
+}, [id]);
+
+// 📌 Lưu pickupLocation
+useEffect(() => {
+  
+  if (pickUpLocation) {
+    localStorage.setItem('pickUpLocation', pickUpLocation);
+  }
+}, [pickUpLocation]);
 
   // Hàm mở popup
   const openVnpayPopup = () => {
     if (!vnpayUrl) return;
+    setIsPayingViaVnpay(true);
     const width = 600, height = 800;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
@@ -84,6 +158,14 @@ const BookingForm = ({ setUser }) => {
       'vnpayWindow',
       `width=${width},height=${height},left=${left},top=${top}`
     );
+
+     // Polling: kiểm tra popup đã bị user đóng hay chưa
+     const timer = setInterval(() => {
+      if (popupRef.current?.closed) {
+        clearInterval(timer);
+        setIsPayingViaVnpay(false);
+      }
+    }, 500);
   };
 
   // Nhận message từ vnpay-return.html
@@ -93,11 +175,17 @@ const BookingForm = ({ setUser }) => {
       if (event.data === 'VNPAY_SUCCESS') {
         setBankPaid(true);
         setPaymentCompleted(true);
+          // lưu vào localStorage
+  localStorage.setItem('paymentCompleted', 'true');
+  localStorage.setItem('car_id', id);
+  // chuyển bước luôn (tránh phải reload mới điều hướng)
+  setCurrentStep(2);
         toast.success('Thanh toán thành công!');
       } else if (event.data === 'VNPAY_FAIL') {
         toast.error('Thanh toán thất bại.');
       }
       // Đóng popup nếu còn mở
+      setIsPayingViaVnpay(false);
       if (popupRef.current) popupRef.current.close();
     }
     window.addEventListener('message', handleMessage);
@@ -106,14 +194,15 @@ const BookingForm = ({ setUser }) => {
 
   useEffect(() => {
     if (selectedPaymentMethod === 'banking') {
+      const price=calculateTotal().deposit;
       const payload = {
         amount: calculateTotal().deposit,
 
 
-        returnUrl: `http://localhost:3000/api/v1/vnpay/return/${id}`
+        returnUrl: `http://localhost:3000/api/v1/vnpay/return/booking/${user_id}/${price}`
       };
 
-      console.log('VNPay payload:', payload);
+      
       axios.post(
         'http://localhost:3000/api/v1/vnpay/create',
         payload,
@@ -129,22 +218,11 @@ const BookingForm = ({ setUser }) => {
         });
     }
   }, [selectedPaymentMethod]);
-  useEffect(() => {
-    if (state?.PickUpLocation) {
-      setLocation(state.PickUpLocation);
-
-      const searchParams = new URLSearchParams(state.PickUpLocation);
-      const city = searchParams.get("city");
-      const district = searchParams.get("district");
-      const ward = searchParams.get("ward");
-
-      // Gộp lại các giá trị có tồn tại, ngăn cách bằng "-"
-      setPickupLocation([city, district, ward].filter(Boolean).join('-'));
-    }
-  }, [state]);
+ 
 
   // Fetch thông tin người thuê và xe
   useEffect(() => {
+   
     const fetchData = async () => {
       try {
         // Fetch thông tin người thuê
@@ -152,6 +230,7 @@ const BookingForm = ({ setUser }) => {
         if (renterResponse.success) {
           setRenterInfo(renterResponse.data);
           setUser(renterResponse.data);
+           setUserid(renterResponse.data.user_id)
         } else {
           navigate('/login');
           return;
@@ -167,7 +246,10 @@ const BookingForm = ({ setUser }) => {
           setCarDetail(carResponse.data.data[0]);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if(!localStorage.getItem('car_id')){
+        
+        navigate(`/search_car_result?${localStorage.getItem('Location')}`)
+        };
       }
     };
 
@@ -250,7 +332,7 @@ const BookingForm = ({ setUser }) => {
     const days = Math.ceil((returnDateTime - pickupDateTime) / (1000 * 60 * 60 * 24));
     const price = carDetail?.price || 0;
     const deposit = carDetail?.required_deposit || 15000000;
-
+    localStorage.setItem("days",days);
     return {
       days,
       pricePerDay: price,
@@ -297,7 +379,28 @@ const BookingForm = ({ setUser }) => {
     setFormErrors(errors);
     return errors.length === 0;
   };
-
+  useEffect(() => {
+    const ls = localStorage;
+    if (ls.getItem('pickupDateTime')) {
+      setPickupDateTime(new Date(ls.getItem('pickupDateTime')));
+    }
+     if (ls.getItem('days')) {
+    setDays(ls.getItem('days'));
+    }
+    if (ls.getItem('returnDateTime')) {
+      setReturnDateTime(new Date(ls.getItem('returnDateTime')));
+    }
+    const method = ls.getItem('selectedPaymentMethod');
+    if (method) setSelectedPaymentMethod(method);
+  
+    if (ls.getItem('pickUpLocation')) {
+      setPickupLocation(ls.getItem('pickUpLocation'));
+    }
+    if (ls.getItem('driverInfo')) {
+      setDriverInfo(JSON.parse(ls.getItem('driverInfo')));
+    }
+    // total/deposit bạn đã khôi phục trong renderStep2
+  }, []);  
   const handlePayment = async () => {
     try {
       setIsSubmitting(true);
@@ -308,10 +411,10 @@ const BookingForm = ({ setUser }) => {
       formData.append('pickup_datetime', pickupDateTime.toISOString());
       formData.append('return_datetime', returnDateTime.toISOString());
       formData.append('payment_method', selectedPaymentMethod);
-      formData.append('total_amount', calculateTotal().total);
-      formData.append('deposit_amount', calculateTotal().deposit);
+      formData.append('total_amount', localStorage.getItem("totalAmount"));
+      formData.append('deposit_amount', localStorage.getItem("depositAmount"));
       formData.append('pickUpLocation', pickUpLocation);
-      formData.append('days',calculateTotal().days)
+      formData.append('days',localStorage.getItem("days"))
 
       // Xử lý driver_info
       if (sameAsRenter) {
@@ -327,7 +430,7 @@ const BookingForm = ({ setUser }) => {
           district: renterInfo.address?.split(' - ')[1] || '',
           ward: renterInfo.address?.split(' - ')[2] || ''
         };
-
+      
         // Append từng trường của driver_info
         Object.entries(driverInfoObj).forEach(([key, value]) => {
           formData.append(`driver_info[${key}]`, value || '');
@@ -355,7 +458,7 @@ const BookingForm = ({ setUser }) => {
           formData.append(`driver_info[${key}]`, value || '');
         });
       }
-
+      socket.emit("CLIENT_BOOKING",id);
       const response = await axios.post(
         'http://localhost:3000/api/v1/customer/booking',
         formData,
@@ -364,11 +467,30 @@ const BookingForm = ({ setUser }) => {
           withCredentials: true
         }
       );
+      if(response.data.status){
+        console.log(response.data.message)
+        navigate(`/search_car_result?${localStorage.getItem('Location')}`,{state: { toastMessage: response.data.message }})
 
+      }
+      else{
+        toast.success('Đặt xe thành công!');
+        setBookingNumber(response.data.data.bookingId );
+        setCurrentStep(3);
+      }
       // đây chỉ chạy khi status code 2xx
-      toast.success('Đặt xe thành công!');
-      setBookingNumber(response.data.booking_number);
-      setCurrentStep(3);
+     localStorage.removeItem('days');
+      localStorage.removeItem('pickupDateTime');
+      localStorage.removeItem('returnDateTime');
+      localStorage.removeItem('totalAmount');
+      localStorage.removeItem('depositAmount');
+      localStorage.removeItem('selectedPaymentMethod');
+      localStorage.removeItem('paymentCompleted');
+      localStorage.removeItem('pickUpLocation');
+      localStorage.removeItem('driverInfo');
+      localStorage.removeItem('car_id');
+      localStorage.removeItem('Location');
+
+      
 
     } catch (error) {
       // error.response chỉ có khi server trả 4xx/5xx
@@ -698,7 +820,17 @@ const BookingForm = ({ setUser }) => {
             Cancel
           </button>
           <button
-            onClick={() => validateStep1() && setCurrentStep(2)}
+             onClick={() => {
+                 if (!validateStep1()) return;
+                 // Lưu ngày giờ và số tiền
+                 localStorage.setItem('pickupDateTime', pickupDateTime.toISOString());
+                 localStorage.setItem('returnDateTime', returnDateTime.toISOString());
+                 const { total, deposit } = calculateTotal();
+                localStorage.setItem('totalAmount', total);
+                 localStorage.setItem('depositAmount', deposit);
+                 
+                 setCurrentStep(2);
+               }}
             className="px-4 py-2 lg:px-6 lg:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm lg:text-base"
           >
             Next
@@ -709,6 +841,8 @@ const BookingForm = ({ setUser }) => {
   );
 
   const renderStep2 = () => {
+    const totalToShow = Number(localStorage.getItem('totalAmount')) ?? calculateTotal().total;
+    const depositToShow = Number(localStorage.getItem('depositAmount')) ?? calculateTotal().deposit;
     return (
       <div className="max-w-2xl mx-auto px-4 lg:px-0">
         <div className="bg-white p-4 lg:p-8 rounded-lg shadow-lg">
@@ -725,8 +859,11 @@ const BookingForm = ({ setUser }) => {
                     name="paymentMethod"
                     value="wallet"
                     checked={selectedPaymentMethod === 'wallet'}
-                    onChange={e => setSelectedPaymentMethod(e.target.value)}
-                    disabled={paymentCompleted}
+                    onChange={e => {
+                        setSelectedPaymentMethod(e.target.value);
+                         localStorage.setItem('selectedPaymentMethod', e.target.value);
+                       }}
+                    disabled={paymentCompleted|| isPayingViaVnpay}
                     className="mr-3 h-5 w-5 text-blue-600"
                   />
                   <span className="font-medium">Ví của tôi</span>
@@ -749,8 +886,11 @@ const BookingForm = ({ setUser }) => {
                     name="paymentMethod"
                     value="cash"
                     checked={selectedPaymentMethod === 'cash'}
-                    onChange={e => setSelectedPaymentMethod(e.target.value)}
-                    disabled={paymentCompleted}
+                    onChange={e => {
+                      setSelectedPaymentMethod(e.target.value);
+                       localStorage.setItem('selectedPaymentMethod', e.target.value);
+                     }}
+                    disabled={paymentCompleted|| isPayingViaVnpay}
                     className="mr-3 h-5 w-5 text-blue-600"
                   />
                   <span className="font-medium">Tiền mặt</span>
@@ -774,7 +914,7 @@ const BookingForm = ({ setUser }) => {
                     name="paymentMethod"
                     value="banking"
                     checked={selectedPaymentMethod === 'banking'}
-                    onChange={e => { setSelectedPaymentMethod(e.target.value); setBankPaid(false); }}
+                    onChange={e => { setSelectedPaymentMethod(e.target.value);localStorage.setItem('selectedPaymentMethod', e.target.value); setBankPaid(false);setIsPayingViaVnpay(false); }}
                     disabled={paymentCompleted}
                     className="mr-3 h-5 w-5 text-blue-600"
                   />
@@ -816,11 +956,12 @@ const BookingForm = ({ setUser }) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Tổng tiền thuê xe:</span>
-                  <span className="font-semibold">{calculateTotal().total.toLocaleString()} VND</span>
+                  <span className="font-semibold">{totalToShow.toLocaleString()} VND</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tiền đặt cọc:</span>
-                  <span className="font-semibold text-red-600">{calculateTotal().deposit.toLocaleString()} VND</span>
+                 
+                  <span className="font-semibold text-red-600">{depositToShow.toLocaleString()} VND</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t">
                   <span>Phương thức thanh toán:</span>
@@ -836,12 +977,13 @@ const BookingForm = ({ setUser }) => {
 
           {/* Nút Quay lại & Xác nhận thanh toán */}
           <div className="flex justify-between mt-6 lg:mt-8">
-            <button
+            {!paymentCompleted &&(<button
               onClick={() => setCurrentStep(1)}
               className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
             >
               Quay lại
-            </button>
+            </button>)}
+            
             <button
               onClick={handlePayment}
               disabled={
@@ -906,12 +1048,12 @@ const BookingForm = ({ setUser }) => {
             Book another car
           </button>
           <button
-            onClick={() => navigate(`/bookings/${bookingNumber}`)}
+            onClick={() => navigate(`/customer/bookingdetail/${bookingNumber}`)}
             className="px-4 py-2 lg:px-6 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm lg:text-base"
           >
             View Booking
           </button>
-        </div>
+        </div>  
       </div>
     </div>
   );

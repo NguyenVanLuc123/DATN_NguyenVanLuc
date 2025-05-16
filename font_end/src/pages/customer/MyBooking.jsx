@@ -3,10 +3,12 @@ import axios from 'axios';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import toast from 'react-hot-toast';
-
+import Swal from 'sweetalert2'
+import { socket } from "../../socket.io/socket";
 // Booking card component with polished UI
-function BookingCard({ booking,setBookings }) {
+function BookingCard({ booking, setBookings }) {
   const navigate = useNavigate();
+  const [bookingSocket, setBookingsocket] = useState("");
   const images = [
     booking.car_id.front_img,
     booking.car_id.left_img,
@@ -14,9 +16,26 @@ function BookingCard({ booking,setBookings }) {
     booking.car_id.back_img,
   ];
   const [idx, setIdx] = useState(0);
+
   const prev = () => setIdx((i) => (i - 1 + images.length) % images.length);
   const next = () => setIdx((i) => (i + 1) % images.length);
 
+  //socket 
+  useEffect(() => {
+    socket.on("SERVER_CONFIRM_DEPOSIT", (data) => {
+      if (data.car_id == booking.car_id.id && booking.status==="PENDING_DEPOSIT") {
+        setBookingsocket(data.BookingStatus)
+      }
+    });
+    // cleanup tránh lặp listener khi component unmount
+    return () => socket.off("receive_message");
+  }, []);
+
+  
+  useEffect(() => {
+   setBookingsocket("")
+  }, [booking]);
+  //socket
   // Helper to format date
   const fmt = (dateStr) =>
     new Date(dateStr).toLocaleString('en-GB', {
@@ -27,32 +46,321 @@ function BookingCard({ booking,setBookings }) {
       minute: '2-digit',
       hour12: true,
     });
-    const handleCancel = async () => {
-      try {
-          const response = await axios.put(
-              `http://localhost:3000/api/v1/customer/booking/cancel/${booking.id}`,
-              null,
-              {
-                  withCredentials: true
-              }
-          );
-          const b =  response.data.BookingresultMycar;
-          setBookings(b);
-  
-          // đây chỉ chạy khi status code 2xx
-          toast.success(response.data.message);
-      } catch (error) {
-          // error.response chỉ có khi server trả 4xx/5xx
-          if (error.response && error.response.data) {
-              // server trả về { success: false, message: '...' }
-              toast.error(error.response.data.message);
-          } else {
-              // lỗi mạng hoặc không có response
-              toast.error('Có lỗi xảy ra khi đặt xe. Vui lòng thử lại!');
-          }
-          console.error('Booking failed:', error);
+  const onConfirmClick = () => {
+    Swal.fire({
+      title: 'Confirm Pick-up',
+      text: 'Bạn có chắc chắn muốn xác nhận đã nhận xe?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Có, xác nhận',
+      cancelButtonText: 'Không, huỷ',
+      reverseButtons: true,
+      buttonsStyling: false,            // ✨ tắt style mặc định
+      customClass: {
+        confirmButton: `
+            px-5 py-2 
+            bg-green-600 hover:bg-green-700 
+            text-white font-medium 
+            rounded-lg
+          `,
+        cancelButton: `
+            px-5 py-2 
+            bg-gray-300 hover:bg-gray-400 
+            text-gray-800 font-medium 
+            rounded-lg
+          `
       }
+    }).then(result => {
+      if (result.isConfirmed) {
+        handleConfirmPickUp()
+      }
+      // cancel thì tự đóng
+    })
   }
+
+
+  const handleConfirmPickUp = async () => {
+    try {
+        socket.emit("CLINET_CONFIRM_PICK_UP",booking.car_id.id)
+      const response = await axios.put(
+        `http://localhost:3000/api/v1/customer/booking/In_progress/${booking.id}`,
+        null,
+        {
+          withCredentials: true
+        }
+      );
+      const b = response.data.BookingresultMycar;
+      setBookings(b);
+      console.log(booking)
+      console.log(b)
+
+
+      // đây chỉ chạy khi status code 2xx
+      toast.success(response.data.message);
+    } catch (error) {
+      // error.response chỉ có khi server trả 4xx/5xx
+      if (error.response && error.response.data) {
+        // server trả về { success: false, message: '...' }
+        toast.error(error.response.data.message);
+      } else {
+        // lỗi mạng hoặc không có response
+        toast.error('Có lỗi xảy ra khi đặt xe. Vui lòng thử lại!');
+      }
+      console.error('Booking failed:', error);
+    }
+  }
+  const handleCancel = async () => {
+    try {
+      socket.emit("CLINET_CANCEL_CAR",booking.car_id.id)
+      const response = await axios.put(
+        `http://localhost:3000/api/v1/customer/booking/cancel/${booking.id}`,
+        null,
+        {
+          withCredentials: true
+        }
+      );
+      const b = response.data.BookingresultMycar;
+      setBookings(b);
+
+
+      // đây chỉ chạy khi status code 2xx
+      toast.success(response.data.message);
+    } catch (error) {
+      // error.response chỉ có khi server trả 4xx/5xx
+      if (error.response && error.response.data) {
+        // server trả về { success: false, message: '...' }
+        toast.error(error.response.data.message);
+      } else {
+        // lỗi mạng hoặc không có response
+        toast.error('Có lỗi xảy ra khi đặt xe. Vui lòng thử lại!');
+      }
+      console.error('Booking failed:', error);
+    }
+  }
+  const onReturnClick = async () => {
+    try {
+       console.log("nut retuen")
+      // 1) Lấy thông tin Totalpayment
+      const res = await axios.get(
+        `http://localhost:3000/api/v1/customer/booking/Totalpayment/${booking.id}`,
+        { withCredentials: true }
+      );
+      console.log(res.data)
+      const { message, day, daysTotal } = res.data;
+
+      // 2) Popup Return Car với custom nút
+      const result = await Swal.fire({
+        title: `<span style="color:#e74c3c">🚗 Return Car</span>`,
+        html: `
+          <p style="font-size:1rem; color:#34495e">${message}</p>
+          <p><strong style="color:#2980b9">Số ngày thuê:</strong> ${day}</p>
+          <p><strong style="color:#c0392b">Số tiền còn lại:</strong> ${daysTotal.toLocaleString()} VND</p>
+        `,
+        icon: 'info',
+        iconColor: '#8e44ad',
+        background: '#fdfbfb',
+        color: '#2c3e50',
+
+        showCancelButton: true,
+        confirmButtonText: 'Có, trả xe',
+        cancelButtonText: 'Không',
+
+        // ✨ custom nút
+        buttonsStyling: false,
+        customClass: {
+          confirmButton: `
+            px-5 py-2 
+            bg-green-600 hover:bg-green-700 
+            text-white font-medium 
+            rounded-lg
+          `,
+          cancelButton: `
+            px-5 py-2 
+            bg-gray-300 hover:bg-gray-400 
+            text-gray-800 font-medium 
+            rounded-lg
+          `
+        },
+        reverseButtons: true,
+      });
+
+      if (!result.isConfirmed) return;
+
+      // 3) Gọi API ReturnCar
+      const ok = await handleReturnCar(daysTotal, day);
+      if (ok) {
+        // 4) Nếu thành công, show popup đánh giá
+        await showReviewPopup(booking);
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        title: '❌ Lỗi',
+        text: 'Không lấy được thông tin thanh toán.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          confirmButton: `
+            px-5 py-2 
+            bg-red-600 hover:bg-red-700 
+            text-white font-medium 
+            rounded-lg
+          `
+        }
+      });
+    }
+  };
+
+  const handleReturnCar = async (total_amount, day) => {
+    try {
+       socket.emit("CLINET_RETURN_CAR",booking.car_id.id)
+      const response = await axios.put(
+        `http://localhost:3000/api/v1/customer/booking/ReturnCar/${booking.id}/${total_amount}`,
+        { day_rental: day },
+        { withCredentials: true }
+      );
+      setBookings(response.data.BookingresultMycar);
+      Swal.fire({
+        title: '✅ Thành công',
+        text: response.data.message,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          confirmButton: `
+            px-5 py-2 
+            bg-green-600 hover:bg-green-700 
+            text-white font-medium 
+            rounded-lg
+          `
+        }
+      });
+      return true;
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Có lỗi xảy ra khi trả xe!';
+      Swal.fire({
+        title: '❌ Thất bại',
+        text: msg,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          confirmButton: `
+            px-5 py-2 
+            bg-red-600 hover:bg-red-700 
+            text-white font-medium 
+            rounded-lg
+          `
+        }
+      });
+      return false;
+    }
+  };
+
+  const showReviewPopup = (booking) => {
+    let rating = 0;
+    return Swal.fire({
+      title: '⭐ Đánh giá trải nghiệm',
+      html: `
+        <div id="swal-star" style="display:flex;justify-content:center;gap:5px;font-size:28px;cursor:pointer;">
+          ${[1, 2, 3, 4, 5].map(i => `<span data-star="${i}">☆</span>`).join('')}
+        </div>
+        <textarea id="swal-report" class="swal2-textarea" placeholder="Viết nhận xét (tuỳ chọn)"></textarea>
+      `,
+      showCancelButton: true,
+      cancelButtonText: 'Skip',
+      confirmButtonText: 'Send',
+      focusConfirm: false,
+
+      // ✨ custom nút đánh giá
+      buttonsStyling: false,
+      customClass: {
+        confirmButton: `
+          px-5 py-2 
+          bg-blue-600 hover:bg-blue-700 
+          text-white font-medium 
+          rounded-lg
+        `,
+        cancelButton: `
+          px-5 py-2 
+          bg-gray-300 hover:bg-gray-400 
+          text-gray-800 font-medium 
+          rounded-lg
+        `
+      },
+
+      preConfirm: () => {
+        if (rating === 0) {
+          Swal.showValidationMessage('Chọn ít nhất 1 sao để đánh giá');
+        }
+        const report = document.getElementById('swal-report').value;
+        return { rating, report };
+      },
+      didOpen: () => {
+        const stars = Swal.getPopup().querySelectorAll('#swal-star span');
+        stars.forEach(el => {
+          const idx = +el.dataset.star;
+          el.addEventListener('mouseenter', () => {
+            stars.forEach(s => s.textContent = +s.dataset.star <= idx ? '★' : '☆');
+          });
+          el.addEventListener('mouseleave', () => {
+            stars.forEach(s => s.textContent = +s.dataset.star <= rating ? '★' : '☆');
+          });
+          el.addEventListener('click', () => {
+            rating = idx;
+            stars.forEach(s => s.textContent = +s.dataset.star <= rating ? '★' : '☆');
+          });
+        });
+      }
+    }).then(async result => {
+      if (result.isConfirmed) {
+        try {
+          const response = await axios.post(
+            `http://localhost:3000/api/v1/customer/booking/Feedback/${booking.car_id.id}`,
+            {
+              rating: result.value.rating,
+              report: result.value.report
+            },
+            { withCredentials: true }
+          );
+          Swal.fire({
+            title: 'Cảm ơn!',
+            text: 'Bạn đã gửi đánh giá thành công.',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            reverseButtons: true,
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: `
+                px-5 py-2 
+                bg-green-600 hover:bg-green-700 
+                text-white font-medium 
+                rounded-lg
+              `
+            }
+          });
+        } catch {
+          Swal.fire({
+            title: '❌',
+            text: 'Gửi đánh giá thất bại.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: `
+                px-5 py-2 
+                bg-red-600 hover:bg-red-700 
+                text-white font-medium 
+                rounded-lg
+              `
+            }
+          });
+        }
+      }
+    });
+  };
+
   // Status color mapping
   const statusStyles = {
     CONFIRMED: 'text-green-700',
@@ -88,9 +396,8 @@ function BookingCard({ booking,setBookings }) {
             <button
               key={dot}
               onClick={() => setIdx(dot)}
-              className={`w-3 h-3 rounded-full border-2 focus:outline-none ${
-                dot === idx ? 'bg-white border-white' : 'bg-transparent border-white'
-              }`}
+              className={`w-3 h-3 rounded-full border-2 focus:outline-none ${dot === idx ? 'bg-white border-white' : 'bg-transparent border-white'
+                }`}
             />
           ))}
         </div>
@@ -122,21 +429,42 @@ function BookingCard({ booking,setBookings }) {
           >
             View Details
           </button>
-          {booking.status === 'CONFIRMED' && (
-            <button className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
-              Confirm Pick-up
-            </button>
-          )}
-          {booking.status === 'IN_PROGRESS' && (
-            <button className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
-              Return Car
-            </button>
-          )}
-          {(booking.status === 'PENDING_DEPOSIT' || booking.status === 'CONFIRMED') && (
-            <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={() => handleCancel()}>
-              Cancel Booking
-            </button>
-          )}
+          {bookingSocket !== "" ? (
+            <>
+              {bookingSocket === 'CONFIRMED' && (
+                <button className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition" onClick={onConfirmClick}>
+                  Confirm Pick-up
+                </button>
+              )}
+              {bookingSocket === 'IN_PROGRESS' && (
+                <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={onReturnClick}>
+                  Return Car
+                </button>
+              )}
+              {(bookingSocket === 'PENDING_DEPOSIT' || bookingSocket === 'CONFIRMED') && (
+                <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={handleCancel}>
+                  Cancel Booking
+                </button>
+              )}
+            </>
+          ) : (<>
+            {booking.status === 'CONFIRMED' && (
+              <button className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition" onClick={onConfirmClick}>
+                Confirm Pick-up
+              </button>
+            )}
+            {booking.status === 'IN_PROGRESS' && (
+              <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={onReturnClick}>
+                Return Car
+              </button>
+            )}
+            {(booking.status === 'PENDING_DEPOSIT' || booking.status === 'CONFIRMED') && (
+              <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={handleCancel}>
+                Cancel Booking
+              </button>
+            )}
+          </>)}
+
         </div>
       </div>
     </div>
@@ -150,6 +478,7 @@ export default function MyBookings({ setUser }) {
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(5);
+
   const { state } = useLocation();
 
   useEffect(() => {
@@ -173,7 +502,7 @@ export default function MyBookings({ setUser }) {
       .catch(() => navigate('/customer/home'));
   }, [setUser, navigate]);
 
- 
+
   // Sort and paginate
   const sorted = useMemo(() => {
     const arr = [...bookings];
@@ -230,9 +559,8 @@ export default function MyBookings({ setUser }) {
             <button
               key={i}
               onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 border rounded transition ${
-                i + 1 === page ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1 border rounded transition ${i + 1 === page ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'
+                }`}
             >
               {i + 1}
             </button>

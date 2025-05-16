@@ -3,18 +3,19 @@ const database = require('../../../Config/DataBase');
 
 module.exports.getCar = async (req, res) => {
   const user = req.user;
+  if (user.is_owner === 0) {
+    return res.status(403).json({ success: false, message: "Bạn không có quyền truy cập" });
+  }
   try {
-    if (user.is_owner === 0) {
-      return res.status(403).json({ success: false, message: "Bạn không có quyền truy cập" });
-    }
+    
 
     // Truy vấn để lấy danh sách xe của chủ sở hữu
     const query = 'SELECT * FROM car WHERE owner_id = ?';
     const ListCarResult = await database.connectDatabase(query, [user.id]);
 
     // Truy vấn booking PENDING
-    const bookingQuery = 'SELECT car_id, status FROM booking WHERE status IN (?, ?)';
-    const listBooking = await database.connectDatabase(bookingQuery, ['PENDING_PAYMENT', 'PENDING_DEPOSIT']);
+    const bookingQuery = 'SELECT car_id, status FROM booking WHERE status IN (?, ?,?,?)';
+    const listBooking = await database.connectDatabase(bookingQuery, ['PENDING_PAYMENT', 'PENDING_DEPOSIT','IN_PROGRESS','CONFIRMED']);
 
     // Map trạng thái booking
     const bookingMap = {};
@@ -34,7 +35,9 @@ module.exports.editCar = async (req, res) => {
   // Sử dụng transaction để cập nhật 3 bảng: car, car_additional_function, car_term_of_use
   const pool = database.pool; // pool của mysql2
   const conn = await pool.getConnection();
-  console.log(req.user)
+  if (req.user.is_owner === 0) {
+    return res.status(403).json({ success: false, message: "Bạn không có quyền truy cập" });
+  }
   try {
     const {
        license_plate, brand, MFG, transmission_type, fuel_type,
@@ -57,10 +60,19 @@ module.exports.editCar = async (req, res) => {
     const final_back_img  = back_img?.trim()  ? back_img  : old.back_img;
     const final_left_img  = left_img?.trim()  ? left_img  : old.left_img;
     const final_right_img = right_img?.trim() ? right_img : old.right_img;
+    const car_status=rows[0].status;
 
-    if(status==='busy'){
-      res.status(422).json({ success: false, message:'Bạn không tự cập nhật về busy được' });
-    }
+    const bookigStatus= await database.connectDatabase(`SELECT status FROM booking WHERE car_id = ? 
+  AND status NOT IN ('STOPPED', 'COMPLETED')
+`,[car_id])
+
+if(bookigStatus.length>0){
+   
+      
+      return res.status(422).json({ success: false, message:'xe vẫn đang trong quá trình booking không thể cập nhật trạng thái ' });
+    
+
+  }
     // 1) UPDATE car
     const updateCarSql = `
       UPDATE car SET
@@ -116,6 +128,8 @@ module.exports.CreateCar = async (req, res) => {
     front_img, back_img, left_img, right_img
   } = req.body;
 
+  
+
   const name = `${brand} ${model}`;
   const final_front_img  = front_img?.trim()  || "";
   const final_back_img   = back_img?.trim()   || "";
@@ -128,6 +142,7 @@ module.exports.CreateCar = async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    const car_rating= await database.connectDatabase('select rating from owner where id =?',[req.user.id]);
     // 1) INSERT INTO car
     const insertCarSql = `
   INSERT INTO car (
@@ -135,7 +150,7 @@ module.exports.CreateCar = async (req, res) => {
     mileage, status, price, model, fuel_type,
     transmission_type, description, front_img, back_img,
     left_img, right_img, location, required_deposit,
-    fuel_consumption, rides, rating, owner_id
+    fuel_consumption, rides, owner_id,rating
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
@@ -145,7 +160,7 @@ const [insertResult] = await conn.query(insertCarSql, [
   transmission_type, description,
   final_front_img, final_back_img, final_left_img, final_right_img,
   location, required_deposit, fuel_consumption,
-  0, 5, user.id // rides = 0, rating = 5, owner_id = user.id
+  0, user.id ,car_rating[0].rating// rides = 0, rating = 5, owner_id = user.id
 ]);
 
     const car_id = insertResult.insertId;

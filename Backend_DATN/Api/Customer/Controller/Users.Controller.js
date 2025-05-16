@@ -296,5 +296,72 @@ module.exports.ChangePassword=async(req,res)=>{
     }
 }
 
+module.exports.wallet=async(req,res)=>{
+   
+    try{
+       
+        
+
+        var users_wallet=[];
+        if(req.user.is_owner==0){
+            users_wallet= await database.connectDatabase("select balance from customer where id=?",[req.user.id]);
+        }else{
+            users_wallet= await database.connectDatabase("select balance from owner where id=?",[req.user.id]);
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"view wallet",
+            users_wallet:users_wallet
+        });
+
+
+    }catch(error){
+        console.log(error.message)
+        res.status(500).json({
+            success:false,
+            message:"Da xay ra loi trong qua trinh view wallet"
+        })
+    }
+}
+
+module.exports.findtransaction=async(req,res)=>{
+    const{start_date ,end_date}=req.body;
+    try{
+        const sql=`SELECT * 
+        FROM transaction
+        WHERE (created_date BETWEEN ? AND ? ) AND user_id =?`
+        
+        var user_id=[];
+        if(req.user.is_owner===0){
+         user_id= await database.connectDatabase("select user_id from customer where id =?",[req.user.id]);
+        }else{
+            user_id= await database.connectDatabase("select user_id from owner where id =?",[req.user.id]);
+        }
+        const transaction= await database.connectDatabase(sql,[start_date,end_date,user_id[0].user_id]);
+
+        if(!transaction){
+            return res.status(200).json({
+                success:true,
+                message:"Không tìm thấy giao dịchdịch",
+            });
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"view transaction",
+            transaction:transaction
+        });
+
+
+    }catch(error){
+        console.log(error.message)
+        res.status(500).json({
+            success:false,
+            message:"Da xay ra loi trong qua trinh view wallet"
+        })
+    }
+}
+
 
 

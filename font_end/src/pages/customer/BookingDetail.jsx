@@ -5,6 +5,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import addressData from "../../data/address.listJson";
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2'
+import { socket } from "../../socket.io/socket";
+
 // Bản đồ các chức năng và điều khoản để render checkbox
 const ADD_MAP = {
     '1': 'Bluetooth',
@@ -29,6 +32,7 @@ export default function BookingDetails({ setUser }) {
     // state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [booking, setBooking] = useState(null);
+    const[bookingSocket,setBookingsocket]=useState("");
     const [balance, setbalance] = useState("");
     const [customer, setcustomer] = useState("");
     const [activeTab, setActiveTab] = useState('booking');
@@ -56,6 +60,23 @@ export default function BookingDetails({ setUser }) {
         district: '',
         ward: ''
     });
+//socket
+    
+useEffect(() => {
+    socket.on("SERVER_CONFIRM_DEPOSIT", (data) => {
+     setBookingsocket(data.BookingStatus)
+     console.log(bookingSocket)
+    });
+
+    // cleanup tránh lặp listener khi component unmount
+    return () => socket.off("receive_message");
+  }, []);
+
+  useEffect(() => {
+   setBookingsocket("")
+  }, [booking]);
+
+  //socket
     // fetch booking
     useEffect(() => {
         axios
@@ -64,7 +85,7 @@ export default function BookingDetails({ setUser }) {
                 if (res.data.success) {
                     const b = Array.isArray(res.data.data) ? res.data.data[0] : res.data.data;
                     setBooking(b);
-                    console.log(b);
+                    
                     setbalance(res.data.user.balance);
                     setcustomer(res.data.user);
 
@@ -235,7 +256,262 @@ export default function BookingDetails({ setUser }) {
         setFormErrors(errors);
         return errors.length === 0;
     };
+    const onConfirmClick = () => {
+        Swal.fire({
+          title: 'Confirm Pick-up',
+          text: 'Bạn có chắc chắn muốn xác nhận đã nhận xe?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Có, xác nhận',
+          cancelButtonText: 'Không, huỷ',
+          reverseButtons: true,
+          buttonsStyling: false,            // ✨ tắt style mặc định
+          customClass: {
+            confirmButton: `
+              px-5 py-2 
+              bg-green-600 hover:bg-green-700 
+              text-white font-medium 
+              rounded-lg
+            `,
+            cancelButton: `
+              px-5 py-2 
+              bg-gray-300 hover:bg-gray-400 
+              text-gray-800 font-medium 
+              rounded-lg
+            `
+          }
+        }).then(result => {
+          if (result.isConfirmed) {
+            handleConfirmPickUp()
+          }
+          // cancel thì tự đóng
+        })
+    }
 
+     // NEW: Return Car
+     const onReturnClick = async () => {
+        try {
+          // 1) Lấy thông tin Totalpayment
+          const res = await axios.get(
+            `http://localhost:3000/api/v1/customer/booking/Totalpayment/${booking.id}`,
+            { withCredentials: true }
+          );
+          const { message, day, daysTotal } = res.data;
+    
+          // 2) Popup Return Car với custom nút
+          const result = await Swal.fire({
+            title: `<span style="color:#e74c3c">🚗 Return Car</span>`,
+            html: `
+              <p style="font-size:1rem; color:#34495e">${message}</p>
+              <p><strong style="color:#2980b9">Số ngày thuê:</strong> ${day}</p>
+              <p><strong style="color:#c0392b">Số tiền còn lại:</strong> ${daysTotal.toLocaleString()} VND</p>
+            `,
+            icon: 'info',
+            iconColor: '#8e44ad',
+            background: '#fdfbfb',
+            color: '#2c3e50',
+    
+            showCancelButton: true,
+            confirmButtonText: 'Có, trả xe',
+            cancelButtonText: 'Không',
+    
+            // ✨ custom nút
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: `
+                px-5 py-2 
+                bg-green-600 hover:bg-green-700 
+                text-white font-medium 
+                rounded-lg
+              `,
+              cancelButton: `
+                px-5 py-2 
+                bg-gray-300 hover:bg-gray-400 
+                text-gray-800 font-medium 
+                rounded-lg
+              `
+            },
+            reverseButtons: true,
+          });
+    
+          if (!result.isConfirmed) return;
+    
+          // 3) Gọi API ReturnCar
+          const ok = await handleReturnCar(daysTotal,day);
+          if (ok) {
+            // 4) Nếu thành công, show popup đánh giá
+            await showReviewPopup(booking);
+          }
+        } catch (err) {
+          console.error(err);
+          Swal.fire({
+            title: '❌ Lỗi',
+            text: 'Không lấy được thông tin thanh toán.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: `
+                px-5 py-2 
+                bg-red-600 hover:bg-red-700 
+                text-white font-medium 
+                rounded-lg
+              `
+            }
+          });
+        }
+      };
+    
+      const handleReturnCar = async (total_amount,day) => {
+        try {
+            socket.emit("CLINET_RETURN_CAR",booking.car_id.id)
+          const response = await axios.put(
+            `http://localhost:3000/api/v1/customer/booking/ReturnCar/${booking.id}/${total_amount}`,
+            {day_rental:day},
+            { withCredentials: true }
+          );
+          const b = Array.isArray(response.data.data) ? response.data.data[0] : response.data.data;
+         setBooking(b);
+          Swal.fire({
+            title: '✅ Thành công',
+            text: response.data.message,
+            icon: 'success',
+            confirmButtonText: 'OK',
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: `
+                px-5 py-2 
+                bg-green-600 hover:bg-green-700 
+                text-white font-medium 
+                rounded-lg
+              `
+            }
+          });
+          return true;
+        } catch (error) {
+          const msg = error.response?.data?.message || 'Có lỗi xảy ra khi trả xe!';
+          Swal.fire({
+            title: '❌ Thất bại',
+            text: msg,
+            icon: 'error',
+            confirmButtonText: 'OK',
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: `
+                px-5 py-2 
+                bg-red-600 hover:bg-red-700 
+                text-white font-medium 
+                rounded-lg
+              `
+            }
+          });
+          return false;
+        }
+      };
+    
+      const showReviewPopup = (bookingId) => {
+        let rating = 0;
+        return Swal.fire({
+          title: '⭐ Đánh giá trải nghiệm',
+          html: `
+            <div id="swal-star" style="display:flex;justify-content:center;gap:5px;font-size:28px;cursor:pointer;">
+              ${[1,2,3,4,5].map(i => `<span data-star="${i}">☆</span>`).join('')}
+            </div>
+            <textarea id="swal-report" class="swal2-textarea" placeholder="Viết nhận xét (tuỳ chọn)"></textarea>
+          `,
+          showCancelButton: true,
+          cancelButtonText: 'Skip',
+          confirmButtonText: 'Send',
+          focusConfirm: false,
+    
+          // ✨ custom nút đánh giá
+          buttonsStyling: false,
+          customClass: {
+            confirmButton: `
+              px-5 py-2 
+              bg-blue-600 hover:bg-blue-700 
+              text-white font-medium 
+              rounded-lg
+            `,
+            cancelButton: `
+              px-5 py-2 
+              bg-gray-300 hover:bg-gray-400 
+              text-gray-800 font-medium 
+              rounded-lg
+            `
+          },
+    
+          preConfirm: () => {
+            if (rating === 0) {
+              Swal.showValidationMessage('Chọn ít nhất 1 sao để đánh giá');
+            }
+            const report = document.getElementById('swal-report').value;
+            return { rating, report };
+          },
+          didOpen: () => {
+            const stars = Swal.getPopup().querySelectorAll('#swal-star span');
+            stars.forEach(el => {
+              const idx = +el.dataset.star;
+              el.addEventListener('mouseenter', () => {
+                stars.forEach(s => s.textContent = +s.dataset.star <= idx ? '★' : '☆');
+              });
+              el.addEventListener('mouseleave', () => {
+                stars.forEach(s => s.textContent = +s.dataset.star <= rating ? '★' : '☆');
+              });
+              el.addEventListener('click', () => {
+                rating = idx;
+                stars.forEach(s => s.textContent = +s.dataset.star <= rating ? '★' : '☆');
+              });
+            });
+          }
+        }).then(async result => {
+          if (result.isConfirmed) {
+            try {
+             await axios.post(
+                `http://localhost:3000/api/v1/customer/booking/Feedback/${booking.car_id.id}`,
+                {
+                  rating: result.value.rating,
+                  report: result.value.report
+                },
+                { withCredentials: true }
+              );
+              Swal.fire({
+                title: 'Cảm ơn!',
+                text: 'Bạn đã gửi đánh giá thành công.',
+                icon: 'success',
+                confirmButtonText: 'OK',
+                reverseButtons: true,
+                buttonsStyling: false,
+                customClass: {
+                  confirmButton: `
+                    px-5 py-2 
+                    bg-green-600 hover:bg-green-700 
+                    text-white font-medium 
+                    rounded-lg
+                  `
+                }
+              });
+            } catch {
+              Swal.fire({
+                title: '❌',
+                text: 'Gửi đánh giá thất bại.',
+                icon: 'error',
+                confirmButtonText: 'OK',
+                buttonsStyling: false,
+                customClass: {
+                  confirmButton: `
+                    px-5 py-2 
+                    bg-red-600 hover:bg-red-700 
+                    text-white font-medium 
+                    rounded-lg
+                  `
+                }
+              });
+            }
+          }
+        });
+      };
+    
 
     const handlePayment = async () => {
         try {
@@ -287,10 +563,6 @@ export default function BookingDetails({ setUser }) {
                 });
 
             }
-            console.log('FormData contents:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}:`, value);
-            }
             const response = await axios.put(
                 `http://localhost:3000/api/v1/customer/booking/${booking.id}`,
                 formData,
@@ -318,8 +590,38 @@ export default function BookingDetails({ setUser }) {
         }
     };
 
+    const handleConfirmPickUp  = async () => {
+        try {
+             socket.emit("CLINET_CONFIRM_PICK_UP",booking.car_id.id)
+            const response = await axios.put(
+                `http://localhost:3000/api/v1/customer/booking/In_progress/${booking.id}`,
+                null,
+                {
+                    withCredentials: true
+                }
+            );
+            const b = Array.isArray(response.data.data) ? response.data.data[0] : response.data.data;
+            setBooking(b);
+           
+
+            // đây chỉ chạy khi status code 2xx
+            toast.success(response.data.message);
+        } catch (error) {
+            // error.response chỉ có khi server trả 4xx/5xx
+            if (error.response && error.response.data) {
+                // server trả về { success: false, message: '...' }
+                toast.error(error.response.data.message);
+            } else {
+                // lỗi mạng hoặc không có response
+                toast.error('Có lỗi xảy ra khi đặt xe. Vui lòng thử lại!');
+            }
+            console.error('Booking failed:', error);
+        }
+    }
+
     const handleCancel = async () => {
         try {
+              socket.emit("CLINET_CANCEL_CAR",booking.car_id.id)
             const response = await axios.put(
                 `http://localhost:3000/api/v1/customer/booking/cancel/${booking.id}`,
                 null,
@@ -329,7 +631,7 @@ export default function BookingDetails({ setUser }) {
             );
             const b = Array.isArray(response.data.data) ? response.data.data[0] : response.data.data;
             setBooking(b);
-            console.log(b)
+           
 
             // đây chỉ chạy khi status code 2xx
             toast.success(response.data.message);
@@ -435,20 +737,43 @@ export default function BookingDetails({ setUser }) {
                             </ul>
                         </div>
                         <div className="flex flex-col space-y-2">
-                            {booking.status === 'CONFIRMED' && (
-                                <button className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
+                        {bookingSocket !== "" ?(
+                                <>
+                                 {bookingSocket=== 'CONFIRMED' && (
+                                    <button className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"  onClick={onConfirmClick}>
+                                        Confirm Pick-up
+                                    </button>
+                                )}
+                                {bookingSocket=== 'IN_PROGRESS' && (
+                                    <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={onReturnClick}>
+                                        Return Car
+                                    </button>
+                                )}
+                                {(bookingSocket === 'PENDING_DEPOSIT' || bookingSocket === 'CONFIRMED') && (
+                                    <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={ handleCancel}>
+                                        Cancel Booking
+                                    </button>
+                                )}
+                                </>
+                        ): (
+                           
+                                <>
+                                 {booking.status === 'CONFIRMED' && (
+                                <button className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"  onClick={onConfirmClick}>
                                     Confirm Pick-up
                                 </button>
                             )}
                             {booking.status === 'IN_PROGRESS' && (
-                                <button className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                                <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={onReturnClick}>
                                     Return Car
                                 </button>
                             )}
                             {(booking.status === 'PENDING_DEPOSIT' || booking.status === 'CONFIRMED') && (
-                                <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={() => handleCancel()}>
+                                <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition" onClick={ handleCancel}>
                                     Cancel Booking
                                 </button>
+                            )}
+                                </>
                             )}
                         </div>
                     </div>

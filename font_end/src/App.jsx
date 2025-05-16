@@ -19,7 +19,8 @@ import CreateCar from './pages/owner/CreateCar';
 import BookingForm from './pages/customer/Booking';
 import MyBookings from './pages/customer/MyBooking';
 import BookingDetails from './pages/customer/BookingDetail';
-
+import ViewWallet from './pages/ViewWallet';
+import FeedbackPage from './pages/Feedback';
 function App() {
   const [user, setUser] = useState(null);
 
@@ -43,7 +44,8 @@ function App() {
           <Route path="/owner/cars" element={<MyCars setUser={setUser} />} />
           <Route path="/owner/car/:id" element={<EditCars setUser={setUser} />} />
           <Route path="/owner/car/create" element={<CreateCar setUser={setUser} />} />
-          
+          <Route path="/wallet" element={<ViewWallet setUser={setUser} />} />
+          <Route path="/feedback" element={<FeedbackPage setUser={setUser} />} />
         </Routes>
         {/* Thêm Toaster để hiển thị toast notifications */}
         <Toaster position="top-right" toastOptions={{ duration: 5000 }} />
