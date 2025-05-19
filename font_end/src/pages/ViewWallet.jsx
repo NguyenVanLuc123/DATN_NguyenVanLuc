@@ -20,6 +20,12 @@ const WalletPage = ({ setUser }) => {
   const [price_to_up, setPriceToUp] = useState("");
   const [user_id, setUserId] = useState("");
 
+  // States for Withdraw popup
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [bank, setBank] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+
   // 1) Hàm fetch lại balance từ server
   const fetchWallet = async () => {
     try {
@@ -75,6 +81,24 @@ const WalletPage = ({ setUser }) => {
     }
   };
 
+  //with_draw_handle
+  const handleWithDraw = async (price) => {
+    try {
+      const res = await axios.get(`http://localhost:3000/api/v1/with_draw/${price}`, { withCredentials: true });
+      if (res.data.status) {
+        setBalance(res.data.balance);
+        setShowWithdrawModal(false);
+        toast.success(res.data.message);
+
+      }
+    } catch (err) {
+      console.error('Error fetching wallet:', err);
+      setShowWithdrawModal(false)
+      toast.error('Failed to withdraw');
+
+    }
+  };
+
   // Mở popup VNPAY
   const openVnpayPopup = () => {
     if (!vnpayUrl) return;
@@ -100,7 +124,6 @@ const WalletPage = ({ setUser }) => {
     function handleMessage(event) {
       if (event.origin !== window.location.origin) return;
       if (event.data === 'VNPAY_SUCCESS') {
-        // Sau khi success: fetch lại số dư
         fetchWallet();
         toast.success('Nạp tiền thành công!');
       } else if (event.data === 'VNPAY_FAIL') {
@@ -124,13 +147,13 @@ const WalletPage = ({ setUser }) => {
         headers: { 'Content-Type': 'application/json' },
         withCredentials: true
       })
-      .then(res => {
-        setVnpayUrl(res.data.url);
-      })
-      .catch(err => {
-        console.error('Error creating VNPay URL:', err);
-        toast.error('Không tạo được link VNPay');
-      });
+        .then(res => {
+          setVnpayUrl(res.data.url);
+        })
+        .catch(err => {
+          console.error('Error creating VNPay URL:', err);
+          toast.error('Không tạo được link VNPay');
+        });
     }
   }, [showPayment, price_to_up, user_id]);
 
@@ -155,7 +178,7 @@ const WalletPage = ({ setUser }) => {
               </p>
             </div>
 
-            {/* Top-up Form */}
+            {/* Top-up & Withdraw Form */}
             <div className="space-y-4">
               <div className="relative">
                 <input
@@ -167,7 +190,10 @@ const WalletPage = ({ setUser }) => {
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">VND</span>
               </div>
               <div className="flex justify-between space-x-4">
-                <button className="flex-1 py-3 bg-yellow-400 text-black font-medium rounded-2xl hover:bg-yellow-500 transition duration-200">
+                <button
+                  className="flex-1 py-3 bg-yellow-400 text-black font-medium rounded-2xl hover:bg-yellow-500 transition duration-200"
+                  onClick={() => setShowWithdrawModal(true)}
+                >
                   Withdraw
                 </button>
                 <button
@@ -192,6 +218,64 @@ const WalletPage = ({ setUser }) => {
             </div>
           </div>
         </div>
+
+        {/* Withdraw Modal */}
+        {showWithdrawModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md animate-fade-in">
+              <h2 className="text-xl font-semibold mb-4 text-center">Thông tin rút tiền</h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block font-medium mb-1">Ngân hàng</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    placeholder="Tên ngân hàng"
+                    value={bank}
+                    onChange={(e) => setBank(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium mb-1">Số tài khoản</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    placeholder="Số tài khoản"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 transition"
+                  onClick={() => setShowWithdrawModal(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="px-4 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 transition text-black font-medium"
+                  onClick={() => {
+                    if (!bank || !accountNumber) {
+                      toast.error("Vui lòng nhập đầy đủ thông tin");
+                      return;
+                    }
+                    if (parseInt(price_to_up) < 50000) {
+                      toast.error("Số tiền rút phải lớn hơn 50000VND");
+                      return;
+                    }
+                    handleWithDraw(price_to_up);
+                  }}
+                >
+                  Xác nhận rút tiền
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="bg-white p-6 rounded-lg shadow mb-8">

@@ -13,4 +13,5 @@ router.patch('/changePassword',Usercontroller.ChangePassword);
 router.get('/logout',auth.AuthUser,Usercontroller.logout);
 router.get('/wallet',auth.AuthUser,Usercontroller.wallet);
 router.post("/findTransction",auth.AuthUser,Usercontroller.findtransaction)
+router.get('/with_draw/:price_with_draw',auth.AuthUser,Usercontroller.WithDraw)
 module.exports=router;

@@ -96,6 +96,7 @@ function CarCard({ car }) {
   }
   const handleConfirm_Payment = async () => {
     try {
+      socket.emit("CLIENT_CONFIRM_PAYMENT",car.id)
       const response = await axios.put(
         `http://localhost:3000/api/v1/owner/booking/ConfirmPayment/${car.id}`,
         null,

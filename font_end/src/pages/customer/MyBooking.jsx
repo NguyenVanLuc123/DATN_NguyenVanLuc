@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation, data } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2'
@@ -23,17 +23,23 @@ function BookingCard({ booking, setBookings }) {
   //socket 
   useEffect(() => {
     socket.on("SERVER_CONFIRM_DEPOSIT", (data) => {
-      if (data.car_id == booking.car_id.id && booking.status==="PENDING_DEPOSIT") {
+      if (data.car_id == booking.car_id.id && booking.status === "PENDING_DEPOSIT") {
         setBookingsocket(data.BookingStatus)
       }
     });
+
+    socket.on("SERVER_CONFIRM_PAYMENT", (data) => {
+if (data.car_id == booking.car_id.id && booking.status === "PENDING_PAYMENT") {
+        setBookingsocket(data.BookingStatus)
+      }
+    })
     // cleanup tránh lặp listener khi component unmount
     return () => socket.off("receive_message");
   }, []);
 
-  
+
   useEffect(() => {
-   setBookingsocket("")
+    setBookingsocket("")
   }, [booking]);
   //socket
   // Helper to format date
@@ -81,7 +87,7 @@ function BookingCard({ booking, setBookings }) {
 
   const handleConfirmPickUp = async () => {
     try {
-        socket.emit("CLINET_CONFIRM_PICK_UP",booking.car_id.id)
+      socket.emit("CLINET_CONFIRM_PICK_UP", booking.car_id.id)
       const response = await axios.put(
         `http://localhost:3000/api/v1/customer/booking/In_progress/${booking.id}`,
         null,
@@ -111,7 +117,7 @@ function BookingCard({ booking, setBookings }) {
   }
   const handleCancel = async () => {
     try {
-      socket.emit("CLINET_CANCEL_CAR",booking.car_id.id)
+      socket.emit("CLINET_CANCEL_CAR", booking.car_id.id)
       const response = await axios.put(
         `http://localhost:3000/api/v1/customer/booking/cancel/${booking.id}`,
         null,
@@ -139,7 +145,7 @@ function BookingCard({ booking, setBookings }) {
   }
   const onReturnClick = async () => {
     try {
-       console.log("nut retuen")
+      console.log("nut retuen")
       // 1) Lấy thông tin Totalpayment
       const res = await axios.get(
         `http://localhost:3000/api/v1/customer/booking/Totalpayment/${booking.id}`,
@@ -214,7 +220,7 @@ function BookingCard({ booking, setBookings }) {
 
   const handleReturnCar = async (total_amount, day) => {
     try {
-       socket.emit("CLINET_RETURN_CAR",booking.car_id.id)
+      socket.emit("CLINET_RETURN_CAR", booking.car_id.id)
       const response = await axios.put(
         `http://localhost:3000/api/v1/customer/booking/ReturnCar/${booking.id}/${total_amount}`,
         { day_rental: day },
@@ -417,9 +423,17 @@ function BookingCard({ booking, setBookings }) {
             <p>Total: <span className="font-medium text-indigo-600">{booking.total_amount} VND</span></p>
             <p>Deposit: <span className="font-medium text-amber-600">{booking.deposit_amount} VND</span></p>
             <p>Booking No: <span className="font-medium text-gray-900">{booking.id}</span></p>
-            <p>
-              Status: <span className={`${statusStyles[booking.status] || 'text-gray-500'} font-semibold`}>{booking.status}</span>
-            </p>
+            {bookingSocket !== "" ? (
+              <>
+                <p>
+                  Status: <span className={`${statusStyles[bookingSocket] || 'text-gray-500'} font-semibold`}>{bookingSocket}</span>
+                </p>
+              </>
+            ) : (<>
+              <p>
+                Status: <span className={`${statusStyles[booking.status] || 'text-gray-500'} font-semibold`}>{booking.status}</span>
+              </p>
+            </>)}
           </div>
         </div>
         <div className="flex flex-wrap gap-4">

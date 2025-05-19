@@ -22,6 +22,10 @@ module.exports.Booking=async(io)=>{
      socket.on('CLINET_RETURN_CAR',async(data)=>{
        socket.broadcast.emit("SERVER_RETURN_CAR",{BookingStatus:"PENDING_PAYMENT",car_id:data})
      })
+
+     socket.on("CLIENT_CONFIRM_PAYMENT",async(data)=>{
+      socket.broadcast.emit("SERVER_CONFIRM_PAYMENT",{BookingStatus:"COMPLETED",car_id:data})
+     })
       
       });
 }
