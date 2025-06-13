@@ -88,7 +88,7 @@ module.exports.login = async (req, res) => {
         const userResult = await database.connectDatabase(query, [email]);
 
         if (userResult.length === 0) {
-            return res.status(401).json({
+            return res.status(400).json({
                 success: false,
                 message: "email không chính xác"
             });
@@ -369,11 +369,11 @@ module.exports.WithDraw = async (req, res) => {
 
         //update custome,owner balance
         if (req.user.is_owner == 0) {
-              const balance_check = await database.connectDatabase("select balance from customer where id =?", [req.user.id])
+            const balance_check = await database.connectDatabase("select balance from customer where id =?", [req.user.id])
             if (balance_check[0].balance < price_with_draw) {
                 return res.status(400).json({
                     status: false,
-                    message: "Số tiền trong tài khoản không đủđủ",
+                    message: "Số tiền trong tài khoản không đủ",
                 })
             }
             user_id = await database.connectDatabase("select user_id from customer where id =? ", [req.user.id]);
@@ -383,11 +383,11 @@ module.exports.WithDraw = async (req, res) => {
             balance_current = await database.connectDatabase("select balance from customer where id =?", [req.user.id])
         }
         else {
-              const balance_check = await database.connectDatabase("select balance from owner where id =?", [req.user.id])
+            const balance_check = await database.connectDatabase("select balance from owner where id =?", [req.user.id])
             if (balance_check[0].balance < price_with_draw) {
                 return res.status(400).json({
                     status: false,
-                    message: "Số tiền trong tài khoản không đủđủ",
+                    message: "Số tiền trong tài khoản không đủ",
                 })
             }
             user_id = await database.connectDatabase("select user_id from owner where id =? ", [req.user.id])
@@ -397,16 +397,16 @@ module.exports.WithDraw = async (req, res) => {
         //create transaction
         const creat_date = getVietnamDateTime();
         const insertPaymentSql = `
-    INSERT INTO transaction (
-    -amount,
-    created_date,
-     method,
-     type,
-     user_id
-      ) VALUES (?, ?, ?, ?, ?)
-    `;
+                INSERT INTO transaction (
+                amount,
+                created_date,
+                method,
+                type,
+                user_id
+                ) VALUES (?, ?, ?, ?, ?)
+                `;
 
-        await database.connectDatabase(insertPaymentSql, [price_with_draw, creat_date, "BANKING", "WITHDRAW", user_id[0].user_id])
+        await database.connectDatabase(insertPaymentSql, [-price_with_draw, creat_date, "BANKING", "WITHDRAW", user_id[0].user_id])
 
         return res.status(200).json({
             status: true,
@@ -418,7 +418,7 @@ module.exports.WithDraw = async (req, res) => {
         console.log(err.message)
         res.status(500).json({
             success: false,
-            message: "Da xay ra loi trong qua trinh rút tiềntiền"
+            message: "Da xay ra loi trong qua trinh rút tiền"
         })
     }
 }

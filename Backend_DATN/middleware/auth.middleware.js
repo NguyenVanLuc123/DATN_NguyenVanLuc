@@ -32,6 +32,7 @@ module.exports.AuthUser = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
         }
     } catch (error) {
+        console.log(error.message)
         return res.status(401).json({ success: false, message: 'Token không hợp lệ' });
     }
 };

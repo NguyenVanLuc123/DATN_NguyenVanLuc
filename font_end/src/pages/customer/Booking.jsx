@@ -736,10 +736,10 @@ useEffect(() => {
 
         {/* Rental Period */}
         <div className="bg-white p-4 lg:p-6 rounded-lg shadow-lg">
-          <h3 className="text-lg lg:text-xl font-bold mb-4">Thời Gian Thuê Xe</h3>
+          <h3 className="text-lg lg:text-xl font-bold mb-4">Car Rental Period</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block mb-2 font-medium">Ngày giờ nhận xe</label>
+              <label className="block mb-2 font-medium">Date and time of pick up</label>
               <DatePicker
                 selected={pickupDateTime}
                 onChange={date => {
@@ -761,7 +761,7 @@ useEffect(() => {
               />
             </div>
             <div>
-              <label className="block mb-2 font-medium">Ngày giờ trả xe</label>
+              <label className="block mb-2 font-medium">Car return date and time</label>
               <DatePicker
                 selected={returnDateTime}
                 onChange={date => setReturnDateTime(date)}
@@ -781,7 +781,7 @@ useEffect(() => {
           </div>
           {pickupDateTime && returnDateTime && (
             <div className="mt-4 text-sm text-gray-600">
-              Thời gian thuê: {calculateTotal().days} ngày
+              Rental period: {calculateTotal().days} days
             </div>
           )}
         </div>

@@ -62,13 +62,12 @@ module.exports.postprofile = async (req, res) => {
     }
 
     let tableName = '';
-    if (req.is_owner == 0) {
+    if (req.user.is_owner == 0) {
       tableName = "customer";
     }
     else {
       tableName = "owner";
     }
-
     // 5) Chuẩn bị câu lệnh UPDATE
     const sql = `
       UPDATE ${tableName}
